@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kyocera Toner Monitor</title>
+  <style>
+    :root {
+      --bg:     #f0f2f5;
+      --card:   #ffffff;
+      --border: #e0e4ea;
+      --text:   #1a1a2e;
+      --muted:  #6b7280;
+      --nav:    #1a1a2e;
+      --accent: #0d6efd;
+      --ok:     #16a34a;
+      --warn:   #d97706;
+      --danger: #dc2626;
+      --early:  #7c3aed;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      background: var(--nav);
+      color: #fff;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header-left h1   { font-size: 1rem; font-weight: 700; }
+    .header-left p    { font-size: .72rem; opacity: .6; margin-top: 1px; }
+
+    .header-right {
+      display: flex; align-items: center; gap: 12px;
+    }
+
+    .auto-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: .8rem; opacity: .85; cursor: pointer; user-select: none;
+    }
+
+    .auto-label input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; }
+
+    select#refreshInterval {
+      background: rgba(255,255,255,.12); color: #fff;
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 4px; padding: 2px 6px; font-size: .78rem; cursor: pointer;
+    }
+    select#refreshInterval option { background: #1a1a2e; }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .btn {
+      background: var(--accent); color: #fff; border: none;
+      padding: 7px 14px; border-radius: 6px; cursor: pointer;
+      font-size: .82rem; font-weight: 600;
+      transition: background .15s;
+    }
+    .btn:hover   { background: #0b5ed7; }
+    .btn:disabled { background: #6b7280; cursor: not-allowed; }
+    .btn-sm { padding: 4px 10px; font-size: .75rem; border-radius: 5px; }
+
+    /* ── Grid ────────────────────────────────────────────────── */
+    main {
+      max-width: 1380px; margin: 0 auto; padding: 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
+      gap: 24px;
+    }
+
+    /* ── Card ────────────────────────────────────────────────── */
+    .printer-card {
+      background: var(--card); border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.05);
+      overflow: hidden;
+    }
+
+    .card-head {
+      background: var(--nav); color: #fff;
+      padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-head .printer-name { font-weight: 700; font-size: .95rem; }
+    .card-head .printer-ip   { font-size: .72rem; opacity: .6; margin-top: 2px; }
+
+    .card-meta {
+      background: #f8f9fa; border-bottom: 1px solid var(--border);
+      padding: 8px 16px; display: flex; gap: 20px;
+      font-size: .8rem; color: var(--muted);
+    }
+    .card-meta strong { color: var(--text); font-weight: 600; }
+
+    .card-body { padding: 16px; }
+
+    .section-label {
+      font-size: .68rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em;
+      color: var(--muted); margin-bottom: 10px;
+    }
+
+    /* ── Toner bars ──────────────────────────────────────────── */
+    .toner-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+
+    .toner-row {
+      display: grid;
+      grid-template-columns: 72px 1fr 52px 130px;
+      align-items: center; gap: 10px;
+    }
+
+    .toner-name {
+      font-size: .84rem; font-weight: 600;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    .dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+
+    .bar-track {
+      background: #e9ecef; border-radius: 6px; height: 18px; overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%; border-radius: 6px;
+      transition: width .5s ease; min-width: 3px;
+    }
+
+    .toner-pct { font-size: .84rem; font-weight: 700; text-align: right; }
+
+    .toner-detail {
+      font-size: .75rem; color: var(--muted);
+      text-align: right; white-space: nowrap;
+    }
+
+    .badge {
+      display: inline-block; font-size: .62rem; font-weight: 600;
+      background: #e9ecef; color: #555;
+      padding: 1px 5px; border-radius: 8px; margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    hr.divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+    .waste-row {
+      display: flex; align-items: center; gap: 10px; font-size: .84rem;
+    }
+    .waste-label { width: 72px; font-weight: 600; color: var(--muted); }
+
+    /* ── Coverage table ──────────────────────────────────────── */
+    table {
+      width: 100%; border-collapse: collapse; font-size: .8rem;
+    }
+
+    thead th {
+      background: #f3f4f6; text-align: left;
+      padding: 7px 10px;
+      font-size: .7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--muted); border-bottom: 1px solid var(--border);
+    }
+
+    tbody td {
+      padding: 7px 10px; border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .install-sub {
+      font-size: .7rem; color: var(--muted); margin-top: 2px;
+    }
+
+    .tag {
+      display: inline-block; font-size: .62rem; font-weight: 700;
+      padding: 1px 5px; border-radius: 8px; margin-left: 4px;
+      vertical-align: middle;
+    }
+    .tag-early   { background: #ede9fe; color: var(--early); }
+    .tag-new     { background: #dcfce7; color: var(--ok); }
+    .tag-starter { background: #e9ecef; color: #555; }
+
+    .val-early { color: var(--early); }
+
+    .coverage-note {
+      margin-top: 10px; font-size: .75rem; color: var(--muted);
+      background: #f8f9fa; padding: 8px 12px;
+      border-radius: 6px; border-left: 3px solid #d1d5db; line-height: 1.5;
+    }
+
+    /* ── Status colours ──────────────────────────────────────── */
+    .ok     { color: var(--ok);     font-weight: 700; }
+    .warn   { color: var(--warn);   font-weight: 700; }
+    .danger { color: var(--danger); font-weight: 700; }
+
+    /* ── States ──────────────────────────────────────────────── */
+    .loading-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 12px; padding: 52px 20px;
+      color: var(--muted); font-size: .88rem;
+    }
+
+    .spinner {
+      width: 30px; height: 30px;
+      border: 3px solid #e9ecef; border-top-color: var(--accent);
+      border-radius: 50%; animation: spin .75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      margin: 16px; background: #fef2f2;
+      border: 1px solid #fca5a5; border-radius: 8px;
+      padding: 14px 16px; color: #991b1b; font-size: .85rem;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="header-left">
+      <h1>Kyocera Toner Monitor</h1>
+      <p>ECOSYS MA3500cifx · SNMP Live Status</p>
+    </div>
+    <div class="header-right">
+      <label class="auto-label">
+        <input type="checkbox" id="autoRefresh"> Auto-refresh
+        <select id="refreshInterval">
+          <option value="60">1 min</option>
+          <option value="300" selected>5 min</option>
+          <option value="600">10 min</option>
+          <option value="1800">30 min</option>
+        </select>
+      </label>
+      <button class="btn" onclick="refreshAll()">↻ Refresh All</button>
+    </div>
+  </header>
+
+  <main id="grid"></main>
+
+  <script>
+  const PRINTERS = [
+    { ip: "192.168.1.210", name: "MA3500cifx #1" },
+    { ip: "192.168.1.211", name: "MA3500cifx #2" },
+  ];
+
+  const COLORS = {
+    Cyan:    { bar: "#00bcd4", dot: "#00bcd4" },
+    Magenta: { bar: "#d81b60", dot: "#d81b60" },
+    Yellow:  { bar: "#f9a825", dot: "#f9a825" },
+    Black:   { bar: "#424242", dot: "#424242" },
+  };
+
+  function cardId(ip) { return "card_" + ip.replace(/\./g, "_"); }
+
+  function barColor(pct, name) {
+    if (pct <= 10) return "var(--danger)";
+    if (pct <= 20) return "var(--warn)";
+    return COLORS[name]?.bar ?? "var(--accent)";
+  }
+
+  function pctClass(pct) {
+    return pct <= 10 ? "danger" : pct <= 20 ? "warn" : "ok";
+  }
+
+  function fmt(n) {
+    return n !== null && n !== undefined ? Number(n).toLocaleString() : "—";
+  }
+
+  // Format "2026-02-25 14:53:59" → "Feb 25, 14:53"
+  function fmtInstall(ts) {
+    if (!ts) return "—";
+    const [datePart, timePart] = ts.split(" ");
+    const [y, m, d] = datePart.split("-").map(Number);
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const hhmm = timePart ? timePart.slice(0, 5) : "";
+    return `${months[m-1]} ${d}, ${hhmm}`;
+  }
+
+  // ── Skeleton ──────────────────────────────────────────────────────────────
+  function skeletonCard(p) {
+    return `
+      <div class="printer-card" id="${cardId(p.ip)}">
+        <div class="card-head">
+          <div>
+            <div class="printer-name">${p.name}</div>
+            <div class="printer-ip">${p.ip}</div>
+          </div>
+          <button class="btn btn-sm"
+            onclick="refreshPrinter('${p.ip}','${p.name}')">↻ Refresh</button>
+        </div>
+        <div class="card-content">
+          <div class="loading-state"><div class="spinner"></div><span>Querying printer…</span></div>
+        </div>
+      </div>`;
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  function renderContent(data) {
+    if (data.error) {
+      return `<div class="error-box">⚠ ${data.error}</div>`;
+    }
+
+    const { supplies, page_count, waste_toner, timestamp } = data;
+
+    // Meta
+    const meta = `
+      <div class="card-meta">
+        <span>Total Pages: <strong>${fmt(page_count)}</strong></span>
+        <span>Updated: <strong>${timestamp}</strong></span>
+      </div>`;
+
+    // ── Toner bars ──────────────────────────────────────────────────────────
+    let toner = `<div class="card-body"><div class="section-label">Toner Levels</div><div class="toner-list">`;
+
+    for (const s of supplies) {
+      if (s.error) {
+        toner += `
+          <div class="toner-row">
+            <span class="toner-name"><span class="dot" style="background:#ccc"></span>${s.name}</span>
+            <span style="color:var(--muted);font-size:.8rem;grid-column:2/5">Error reading data</span>
+          </div>`;
+        continue;
+      }
+
+      const c  = COLORS[s.name] ?? {};
+      const bc = barColor(s.percent, s.name);
+      const pc = pctClass(s.percent);
+      const starterBadge = s.is_starter ? '<span class="badge tag-starter">starter</span>' : "";
+      const newBadge     = s.cartridge_event === "initial" || s.cartridge_event === "replaced"
+        ? `<span class="badge tag-new">${s.cartridge_event === "replaced" ? "replaced" : "initial"}</span>` : "";
+
+      toner += `
+        <div class="toner-row">
+          <span class="toner-name">
+            <span class="dot" style="background:${c.dot ?? '#999'}"></span>${s.name}
+          </span>
+          <div class="bar-track" title="${s.current} / ${s.max} pages remaining">
+            <div class="bar-fill" style="width:${Math.max(1.5, s.percent)}%; background:${bc}"></div>
+          </div>
+          <span class="toner-pct ${pc}">${s.percent.toFixed(1)}%</span>
+          <span class="toner-detail">${fmt(s.current)} / ${fmt(s.max)}${starterBadge}${newBadge}</span>
+        </div>`;
+    }
+
+    // Waste toner
+    const wasteClass = waste_toner.status === "OK" ? "ok" : "danger";
+    toner += `
+      <hr class="divider">
+      <div class="waste-row">
+        <span class="waste-label">Waste Box</span>
+        <span class="${wasteClass}">${waste_toner.status}</span>
+      </div>
+    </div>`;  // close toner-list
+
+    // ── Coverage table ──────────────────────────────────────────────────────
+    let cov = `
+      <hr class="divider" style="margin:0 0 16px">
+      <div class="section-label">Coverage Estimation — since cartridge install</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Supply</th>
+            <th>Installed</th>
+            <th>Pages since install</th>
+            <th>Est. Coverage</th>
+            <th>Eff. Yield</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+    let anyEarly    = false;
+    let anyReliable = false;
+
+    for (const s of supplies) {
+      if (s.error) continue;
+
+      const c = COLORS[s.name] ?? {};
+
+      // Installed date + pages at install
+      const installDate = fmtInstall(s.install_timestamp);
+      const installSub  = s.install_page_count !== undefined
+        ? `<div class="install-sub">at page ${fmt(s.install_page_count)}, level ${fmt(s.install_level)}</div>` : "";
+
+      // Pages since install
+      const pagesSince = s.pages_since_install !== undefined ? fmt(s.pages_since_install) : "—";
+
+      // Coverage & yield — mark unreliable estimates
+      let covCell, yieldCell;
+      if (s.estimated_coverage !== null && s.estimated_coverage !== undefined) {
+        if (s.coverage_reliable) {
+          covCell   = `${s.estimated_coverage.toFixed(2)}%`;
+          yieldCell = `${fmt(s.effective_yield)} pp`;
+          anyReliable = true;
+        } else {
+          covCell   = `<span class="val-early">${s.estimated_coverage.toFixed(2)}%</span><span class="tag tag-early">early</span>`;
+          yieldCell = `<span class="val-early">${fmt(s.effective_yield)} pp</span><span class="tag tag-early">early</span>`;
+          anyEarly  = true;
+        }
+      } else {
+        covCell   = "—";
+        yieldCell = "—";
+      }
+
+      cov += `
+        <tr>
+          <td>
+            <span class="dot" style="background:${c.dot ?? '#999'};display:inline-block;vertical-align:middle;margin-right:6px"></span>${s.name}
+          </td>
+          <td>${installDate}${installSub}</td>
+          <td>${pagesSince}</td>
+          <td>${covCell}</td>
+          <td>${yieldCell}</td>
+        </tr>`;
+    }
+
+    cov += `</tbody></table>`;
+
+    // Footer note
+    let note = "";
+    if (anyEarly && !anyReliable) {
+      note = `Coverage estimates are accumulating — values shown in <span style="color:var(--early);font-weight:600">purple</span> are early-stage and will stabilise after ~100 pages per cartridge.`;
+    } else if (anyEarly) {
+      note = `Purple <span style="color:var(--early);font-weight:600">(early)</span> values have fewer than 100 pages of data and may be noisy.`;
+    } else if (anyReliable) {
+      note = `Estimates are based on toner consumed and pages printed since each cartridge was installed. SNMP capacity is rated at 5% coverage (ISO/IEC 19798).`;
+    } else {
+      note = `No toner has been consumed since the current cartridges were installed yet.`;
+    }
+
+    cov += `<div class="coverage-note">${note}</div>`;
+
+    return meta + toner + cov + `</div>`;  // close card-body
+  }
+
+  // ── Fetch ─────────────────────────────────────────────────────────────────
+  async function refreshPrinter(ip, name) {
+    const card = document.getElementById(cardId(ip));
+    if (!card) return;
+
+    let content = card.querySelector(".card-content");
+    if (!content) {
+      content = document.createElement("div");
+      content.className = "card-content";
+      card.appendChild(content);
+    }
+    content.innerHTML = `<div class="loading-state"><div class="spinner"></div><span>Querying printer…</span></div>`;
+
+    try {
+      const res  = await fetch(`/api/check?ip=${encodeURIComponent(ip)}`);
+      const data = await res.json();
+      content.innerHTML = renderContent(data);
+    } catch (err) {
+      content.innerHTML = `<div class="error-box">⚠ Network error: ${err.message}</div>`;
+    }
+  }
+
+  function refreshAll() {
+    for (const p of PRINTERS) refreshPrinter(p.ip, p.name);
+  }
+
+  // ── Auto-refresh ──────────────────────────────────────────────────────────
+  let autoTimer = null;
+
+  function setupAutoRefresh() {
+    const cb  = document.getElementById("autoRefresh");
+    const sel = document.getElementById("refreshInterval");
+    function restart() {
+      clearInterval(autoTimer); autoTimer = null;
+      if (cb.checked) autoTimer = setInterval(refreshAll, parseInt(sel.value, 10) * 1000);
+    }
+    cb.addEventListener("change", restart);
+    sel.addEventListener("change", restart);
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  document.getElementById("grid").innerHTML = PRINTERS.map(skeletonCard).join("");
+  setupAutoRefresh();
+  refreshAll();
+  </script>
+</body>
+</html>

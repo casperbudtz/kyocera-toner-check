@@ -1,0 +1,182 @@
+{
+  "192.168.1.210": {
+    "Cyan": {
+      "baseline": {
+        "timestamp": "2026-02-25 15:04:07",
+        "page_count": 20,
+        "level": 2325,
+        "max": 2500
+      },
+      "last_seen": {
+        "timestamp": "2026-02-25 15:05:10",
+        "level": 2325,
+        "page_count": 20
+      },
+      "history": [
+        {
+          "event": "initial",
+          "timestamp": "2026-02-25 15:04:07",
+          "page_count": 20,
+          "level": 2325,
+          "max": 2500
+        }
+      ]
+    },
+    "Magenta": {
+      "baseline": {
+        "timestamp": "2026-02-25 15:04:07",
+        "page_count": 20,
+        "level": 2325,
+        "max": 2500
+      },
+      "last_seen": {
+        "timestamp": "2026-02-25 15:05:10",
+        "level": 2325,
+        "page_count": 20
+      },
+      "history": [
+        {
+          "event": "initial",
+          "timestamp": "2026-02-25 15:04:07",
+          "page_count": 20,
+          "level": 2325,
+          "max": 2500
+        }
+      ]
+    },
+    "Yellow": {
+      "baseline": {
+        "timestamp": "2026-02-25 15:04:07",
+        "page_count": 20,
+        "level": 2325,
+        "max": 2500
+      },
+      "last_seen": {
+        "timestamp": "2026-02-25 15:05:10",
+        "level": 2325,
+        "page_count": 20
+      },
+      "history": [
+        {
+          "event": "initial",
+          "timestamp": "2026-02-25 15:04:07",
+          "page_count": 20,
+          "level": 2325,
+          "max": 2500
+        }
+      ]
+    },
+    "Black": {
+      "baseline": {
+        "timestamp": "2026-02-25 15:04:07",
+        "page_count": 20,
+        "level": 3360,
+        "max": 3500
+      },
+      "last_seen": {
+        "timestamp": "2026-02-25 15:05:10",
+        "level": 3360,
+        "page_count": 20
+      },
+      "history": [
+        {
+          "event": "initial",
+          "timestamp": "2026-02-25 15:04:07",
+          "page_count": 20,
+          "level": 3360,
+          "max": 3500
+        }
+      ]
+    }
+  },
+  "192.168.1.211": {
+    "Cyan": {
+      "baseline": {
+        "timestamp": "2026-02-25 15:04:37",
+        "page_count": 2,
+        "level": 2350,
+        "max": 2500
+      },
+      "last_seen": {
+        "timestamp": "2026-02-25 15:05:11",
+        "level": 2350,
+        "page_count": 2
+      },
+      "history": [
+        {
+          "event": "initial",
+          "timestamp": "2026-02-25 15:04:37",
+          "page_count": 2,
+          "level": 2350,
+          "max": 2500
+        }
+      ]
+    },
+    "Magenta": {
+      "baseline": {
+        "timestamp": "2026-02-25 15:04:37",
+        "page_count": 2,
+        "level": 2350,
+        "max": 2500
+      },
+      "last_seen": {
+        "timestamp": "2026-02-25 15:05:11",
+        "level": 2350,
+        "page_count": 2
+      },
+      "history": [
+        {
+          "event": "initial",
+          "timestamp": "2026-02-25 15:04:37",
+          "page_count": 2,
+          "level": 2350,
+          "max": 2500
+        }
+      ]
+    },
+    "Yellow": {
+      "baseline": {
+        "timestamp": "2026-02-25 15:04:37",
+        "page_count": 2,
+        "level": 2350,
+        "max": 2500
+      },
+      "last_seen": {
+        "timestamp": "2026-02-25 15:05:11",
+        "level": 2350,
+        "page_count": 2
+      },
+      "history": [
+        {
+          "event": "initial",
+          "timestamp": "2026-02-25 15:04:37",
+          "page_count": 2,
+          "level": 2350,
+          "max": 2500
+        }
+      ]
+    },
+    "Black": {
+      "baseline": {
+        "timestamp": "2026-02-25 15:04:37",
+        "page_count": 2,
+        "level": 3395,
+        "max": 3500
+      },
+      "last_seen": {
+        "timestamp": "2026-02-25 15:05:11",
+        "level": 3395,
+        "page_count": 2
+      },
+      "history": [
+        {
+          "event": "initial",
+          "timestamp": "2026-02-25 15:04:37",
+          "page_count": 2,
+          "level": 3395,
+          "max": 3500
+        }
+      ]
+    }
+  }
+}
