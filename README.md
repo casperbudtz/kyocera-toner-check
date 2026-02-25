@@ -2,6 +2,8 @@
 
 Monitors toner levels and calculates actual page coverage on Kyocera ECOSYS MA3500cifx/MA4000cifx color laser printers via SNMP.
 
+> **Part of [command-central](https://github.com/casperbudtz/command-central).** The web dashboard (`server.py` + `index.html`) is served at `/kyocera/` by the top-level server. This repo is included as a git submodule.
+
 ## Background
 
 Kyocera (and most printer vendors) rate toner cartridge yield at 5% page coverage per ISO/IEC 19798. Pay-per-click service agreements also charge flat rates assuming this 5% figure. In practice, most offices print well below 5% average coverage — meaning cartridges last significantly longer than rated, and buying outright is often cheaper than a click contract.
@@ -14,7 +16,18 @@ This script queries the printer's SNMP interface to compare actual toner consump
 sudo apt install snmp
 ```
 
-## Usage
+## Running
+
+### Web dashboard (recommended)
+
+Start the top-level command-central server:
+
+```bash
+python3 /path/to/command-central/server.py
+# Open http://localhost:8080/kyocera/
+```
+
+### Bash CLI (standalone)
 
 ```bash
 ./kyocera_toner_check.sh [printer-ip] [community]
