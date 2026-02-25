@@ -25,8 +25,8 @@ REPLACEMENT_THRESHOLD = 100
 MIN_RELIABLE_PAGES = 100
 
 PRINTERS = [
-    {"ip": "192.168.1.210", "name": "MA3500cifx #1"},
-    {"ip": "192.168.1.211", "name": "MA3500cifx #2"},
+    {"ip": "192.168.1.210", "name": "Kyocera Kontor"},
+    {"ip": "192.168.1.211", "name": "Kyocera Kitte"},
 ]
 
 OID_SUPPLY_DESC  = "1.3.6.1.2.1.43.11.1.1.6.1"
