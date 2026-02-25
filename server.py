@@ -26,9 +26,9 @@ PORT = 8080
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE   = os.path.join(SCRIPT_DIR, "toner_log.json")
 
-# If toner level increases by more than this many rated pages between two
-# consecutive readings, a cartridge replacement is assumed and a new
-# baseline is recorded.
+# A cartridge replacement is recorded when the toner level both rises by
+# more than this many rated pages AND is at or above 85 % of max capacity
+# (i.e. a fresh cartridge was installed, not just a small SNMP fluctuation).
 REPLACEMENT_THRESHOLD = 100
 
 # Minimum pages printed since install before coverage estimates are
@@ -132,8 +132,8 @@ def apply_log(log, ip, name, page_count, level, max_val, timestamp):
     else:
         last_level = entry["last_seen"]["level"]
 
-        if level > last_level + REPLACEMENT_THRESHOLD:
-            # Level jumped up significantly — cartridge was replaced.
+        if level > last_level + REPLACEMENT_THRESHOLD and level >= 0.85 * max_val:
+            # Level jumped back to near-full capacity — cartridge was replaced.
             event = "replaced"
             entry["baseline"] = {
                 "timestamp":  timestamp,
