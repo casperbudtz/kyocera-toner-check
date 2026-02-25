@@ -4,9 +4,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Single bash script (`kyocera_toner_check.sh`) that monitors toner levels and calculates actual page coverage on Kyocera ECOSYS MA3500cifx/MA4000cifx printers via SNMP. Used to evaluate whether buying toner cartridges outright is cheaper than pay-per-click service agreements.
+Toner monitoring tools for Kyocera ECOSYS MA3500cifx/MA4000cifx printers via SNMP. Used to evaluate whether buying toner cartridges outright is cheaper than pay-per-click service agreements.
+
+Files:
+- `kyocera_toner_check.sh` — standalone bash CLI for manual spot-checks
+- `server.py` — **library module** (not a standalone server); exposes business logic imported by the top-level `command-central` server
+- `index.html` — browser dashboard; served at `/kyocera/` by the top-level server
 
 ## Running
+
+This project is served as a sub-project of [command-central](https://github.com/casperbudtz/command-central). Start the top-level server:
+
+```bash
+python3 /path/to/command-central/server.py
+# Dashboard at: http://localhost:8080/kyocera/
+```
+
+The bash CLI can still be run standalone:
 
 ```bash
 ./kyocera_toner_check.sh [printer-ip] [community]
@@ -15,6 +29,18 @@ Single bash script (`kyocera_toner_check.sh`) that monitors toner levels and cal
 ```
 
 Requires `snmpget` (from `snmp` package: `sudo apt install snmp`).
+
+## server.py — Library API
+
+`server.py` is imported by the top-level server via `importlib`. Do not add an HTTP server or `if __name__ == "__main__"` block. Public interface:
+
+| Symbol | Type | Description |
+|---|---|---|
+| `PRINTERS` | list | Configured printer dicts (`ip`, `name`) |
+| `check_printer(ip, community)` | function | Full SNMP query; returns toner/coverage JSON |
+| `load_log()` | function | Read `toner_log.json` |
+| `save_log(data)` | function | Atomically write `toner_log.json` |
+| `apply_log(...)` | function | Update cartridge baseline; return coverage fields |
 
 ## Network
 
