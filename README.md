@@ -2,7 +2,7 @@
 
 Monitors toner levels and calculates actual page coverage on Kyocera ECOSYS MA3500cifx/MA4000cifx color laser printers via SNMP.
 
-> **Part of [command-central](https://github.com/casperbudtz/command-central).** The web dashboard (`server.py` + `index.html`) is served at `/kyocera/` by the top-level server. This repo is included as a git submodule.
+> **Part of [command-central](https://github.com/casperbudtz/command-central).** The web dashboard (`monitor.py` + `index.html`) is served at `/kyocera/` by the top-level server. This repo is included as a git submodule.
 
 ## Background
 
