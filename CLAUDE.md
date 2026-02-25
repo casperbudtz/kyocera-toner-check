@@ -8,7 +8,7 @@ Toner monitoring tools for Kyocera ECOSYS MA3500cifx/MA4000cifx printers via SNM
 
 Files:
 - `kyocera_toner_check.sh` — standalone bash CLI for manual spot-checks
-- `server.py` — **library module** (not a standalone server); exposes business logic imported by the top-level `command-central` server
+- `monitor.py` — **library module** (not a standalone server); exposes business logic imported by the top-level `command-central` server
 - `index.html` — browser dashboard; served at `/kyocera/` by the top-level server
 
 ## Running
@@ -30,9 +30,9 @@ The bash CLI can still be run standalone:
 
 Requires `snmpget` (from `snmp` package: `sudo apt install snmp`).
 
-## server.py — Library API
+## monitor.py — Library API
 
-`server.py` is imported by the top-level server via `importlib`. Do not add an HTTP server or `if __name__ == "__main__"` block. Public interface:
+`monitor.py` is imported by the top-level server via `importlib`. Do not add an HTTP server or `if __name__ == "__main__"` block. Public interface:
 
 | Symbol | Type | Description |
 |---|---|---|
