@@ -460,7 +460,7 @@
     content.innerHTML = `<div class="loading-state"><div class="spinner"></div><span>Querying printer…</span></div>`;
 
     try {
-      const res  = await fetch(`/api/check?ip=${encodeURIComponent(ip)}`);
+      const res  = await fetch(`/kyocera/api/check?ip=${encodeURIComponent(ip)}`);
       const data = await res.json();
       content.innerHTML = renderContent(data);
     } catch (err) {

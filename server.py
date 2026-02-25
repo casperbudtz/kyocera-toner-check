@@ -1,28 +1,17 @@
 #!/usr/bin/env python3
 """
-Kyocera Toner Web Monitor
-Local HTTP server that queries printer toner status via SNMP and serves
-the data as JSON to a browser dashboard.
+Kyocera Toner Monitor — library module
+Business logic for querying printer toner status via SNMP and maintaining
+a log of cartridge baselines for coverage calculations.
 
-Log file (toner_log.json) records a baseline for each cartridge at the
-moment it is first seen or replaced, so that coverage calculations use
-the delta (toner consumed / pages printed) since that cartridge was
-installed rather than lifetime totals.
-
-Usage:
-    python3 server.py [port]
-    Default port: 8080
+Imported by the top-level server.py; not intended to be run standalone.
 """
 
-import http.server
 import json
 import os
 import subprocess
-import sys
-import urllib.parse
 from datetime import datetime
 
-PORT = 8080
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE   = os.path.join(SCRIPT_DIR, "toner_log.json")
 
@@ -262,61 +251,3 @@ def check_printer(ip, community="public"):
         "waste_toner": {"status": waste_status},
         "error":       None,
     }
-
-
-# ── HTTP server ───────────────────────────────────────────────────────────────
-
-class Handler(http.server.BaseHTTPRequestHandler):
-    def do_GET(self):
-        parsed = urllib.parse.urlparse(self.path)
-
-        if parsed.path == "/":
-            self._serve_file("index.html", "text/html; charset=utf-8")
-        elif parsed.path == "/api/check":
-            params    = urllib.parse.parse_qs(parsed.query)
-            ip        = params.get("ip",        ["192.168.1.210"])[0]
-            community = params.get("community", ["public"])[0]
-            self._send_json(check_printer(ip, community))
-        elif parsed.path == "/api/printers":
-            self._send_json(PRINTERS)
-        elif parsed.path == "/api/log":
-            self._send_json(load_log())
-        else:
-            self.send_error(404)
-
-    def _serve_file(self, filename, content_type):
-        filepath = os.path.join(SCRIPT_DIR, filename)
-        try:
-            with open(filepath, "rb") as f:
-                content = f.read()
-        except FileNotFoundError:
-            self.send_error(404)
-            return
-        self.send_response(200)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(content)))
-        self.end_headers()
-        self.wfile.write(content)
-
-    def _send_json(self, data):
-        content = json.dumps(data, indent=2).encode()
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(content)))
-        self.end_headers()
-        self.wfile.write(content)
-
-    def log_message(self, fmt, *args):
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] {fmt % args}")
-
-
-if __name__ == "__main__":
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else PORT
-    print(f"Kyocera Toner Monitor  →  http://localhost:{port}")
-    print(f"Log file:               {LOG_FILE}")
-    print("Press Ctrl+C to stop.\n")
-    with http.server.HTTPServer(("", port), Handler) as httpd:
-        try:
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            print("\nStopped.")
