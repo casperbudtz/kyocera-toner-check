@@ -8,7 +8,7 @@
         "max": 2500
       },
       "last_seen": {
-        "timestamp": "2026-02-25 16:12:20",
+        "timestamp": "2026-02-26 15:01:19",
         "level": 2325,
         "page_count": 20
       },
@@ -30,7 +30,7 @@
         "max": 2500
       },
       "last_seen": {
-        "timestamp": "2026-02-25 16:12:20",
+        "timestamp": "2026-02-26 15:01:19",
         "level": 2325,
         "page_count": 20
       },
@@ -52,7 +52,7 @@
         "max": 2500
       },
       "last_seen": {
-        "timestamp": "2026-02-25 16:12:20",
+        "timestamp": "2026-02-26 15:01:19",
         "level": 2325,
         "page_count": 20
       },
@@ -74,7 +74,7 @@
         "max": 3500
       },
       "last_seen": {
-        "timestamp": "2026-02-25 16:12:20",
+        "timestamp": "2026-02-26 15:01:19",
         "level": 3360,
         "page_count": 20
       },
@@ -98,9 +98,9 @@
         "max": 2500
       },
       "last_seen": {
-        "timestamp": "2026-02-25 16:12:20",
-        "level": 2350,
-        "page_count": 2
+        "timestamp": "2026-02-26 15:01:20",
+        "level": 2325,
+        "page_count": 6
       },
       "history": [
         {
@@ -120,9 +120,9 @@
         "max": 2500
       },
       "last_seen": {
-        "timestamp": "2026-02-25 16:12:20",
-        "level": 2350,
-        "page_count": 2
+        "timestamp": "2026-02-26 15:01:20",
+        "level": 2325,
+        "page_count": 6
       },
       "history": [
         {
@@ -142,9 +142,9 @@
         "max": 2500
       },
       "last_seen": {
-        "timestamp": "2026-02-25 16:12:20",
-        "level": 2350,
-        "page_count": 2
+        "timestamp": "2026-02-26 15:01:20",
+        "level": 2325,
+        "page_count": 6
       },
       "history": [
         {
@@ -164,9 +164,9 @@
         "max": 3500
       },
       "last_seen": {
-        "timestamp": "2026-02-25 16:12:20",
-        "level": 3395,
-        "page_count": 2
+        "timestamp": "2026-02-26 15:01:20",
+        "level": 3360,
+        "page_count": 6
       },
       "history": [
         {

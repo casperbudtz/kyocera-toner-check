@@ -10,6 +10,7 @@ Files:
 - `kyocera_toner_check.sh` — standalone bash CLI for manual spot-checks
 - `monitor.py` — **library module** (not a standalone server); exposes business logic imported by the top-level `command-central` server
 - `index.html` — browser dashboard; served at `/kyocera/` by the top-level server
+- `printers.json` — persistent printer list (managed via web UI or `add_printer()`/`remove_printer()`)
 
 ## Running
 
@@ -36,7 +37,12 @@ Requires `snmpget` (from `snmp` package: `sudo apt install snmp`).
 
 | Symbol | Type | Description |
 |---|---|---|
-| `PRINTERS` | list | Configured printer dicts (`ip`, `name`) |
+| `PRINTERS` | list | Printer dicts (`ip`, `name`), loaded from `printers.json` on import |
+| `load_printers()` | function | Read printer list from `printers.json` |
+| `save_printers(printers)` | function | Atomically write printer list to `printers.json` |
+| `resolve_name(ip)` | function | Resolve hostname via reverse DNS, then NetBIOS (`nmblookup`), fallback to raw IP |
+| `add_printer(ip, name=None)` | function | Add printer (auto-resolves name if omitted), persists to JSON, returns entry |
+| `remove_printer(ip)` | function | Remove printer by IP, persists to JSON, returns `True`/`False` |
 | `check_printer(ip, community)` | function | Full SNMP query; returns toner/coverage JSON |
 | `load_log()` | function | Read `toner_log.json` |
 | `save_log(data)` | function | Atomically write `toner_log.json` |
@@ -102,7 +108,6 @@ A PowerShell PRTG EXE/Script sensor was attempted but failed (PRTG server on Win
 
 Ideas noted in the script header (not yet implemented):
 - CSV logging mode for trending (append timestamp + values)
-- Multi-printer loop over multiple IPs
 - Alert thresholds (e.g. email when toner < X%)
 - Cron job for periodic collection
 - Cost-per-page calculation with configurable cartridge prices
