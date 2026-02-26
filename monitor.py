@@ -9,11 +9,13 @@ Imported by the top-level server.py; not intended to be run standalone.
 
 import json
 import os
+import socket
 import subprocess
 from datetime import datetime
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-LOG_FILE   = os.path.join(SCRIPT_DIR, "toner_log.json")
+SCRIPT_DIR     = os.path.dirname(os.path.abspath(__file__))
+LOG_FILE       = os.path.join(SCRIPT_DIR, "toner_log.json")
+PRINTERS_FILE  = os.path.join(SCRIPT_DIR, "printers.json")
 
 # A cartridge replacement is recorded when the toner level both rises by
 # more than this many rated pages AND is at or above 85 % of max capacity
@@ -24,10 +26,87 @@ REPLACEMENT_THRESHOLD = 100
 # considered meaningful enough to display without a warning.
 MIN_RELIABLE_PAGES = 100
 
-PRINTERS = [
-    {"ip": "192.168.1.210", "name": "Kyocera Kontor"},
-    {"ip": "192.168.1.211", "name": "Kyocera Kitte"},
-]
+
+# ── Printer list persistence ─────────────────────────────────────────────────
+
+def load_printers():
+    """Load printer list from printers.json."""
+    try:
+        with open(PRINTERS_FILE) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+
+def save_printers(printers):
+    """Atomically write the printer list to printers.json."""
+    tmp = PRINTERS_FILE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(printers, f, indent=2)
+        f.write("\n")
+    os.replace(tmp, PRINTERS_FILE)
+
+
+def resolve_name(ip):
+    """Try to resolve a human-readable name for the given IP.
+
+    Attempts in order:
+      1. Reverse DNS (socket.gethostbyaddr)
+      2. NetBIOS lookup (nmblookup -A)
+      3. Falls back to the raw IP string
+    """
+    # 1. Reverse DNS
+    try:
+        hostname = socket.gethostbyaddr(ip)[0]
+        if hostname and hostname != ip:
+            return hostname
+    except (socket.herror, socket.gaierror, OSError):
+        pass
+
+    # 2. NetBIOS via nmblookup
+    try:
+        r = subprocess.run(
+            ["nmblookup", "-A", ip],
+            capture_output=True, text=True, timeout=5,
+        )
+        if r.returncode == 0:
+            for line in r.stdout.splitlines():
+                line = line.strip()
+                if "<00>" in line and "<UNIQUE>" in line.upper():
+                    return line.split()[0]
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+    # 3. Fallback
+    return ip
+
+
+def add_printer(ip, name=None):
+    """Add a printer. Resolves name if not provided. Returns the new entry."""
+    printers = load_printers()
+    # Avoid duplicates
+    for p in printers:
+        if p["ip"] == ip:
+            return p
+    if not name:
+        name = resolve_name(ip)
+    entry = {"ip": ip, "name": name}
+    printers.append(entry)
+    save_printers(printers)
+    return entry
+
+
+def remove_printer(ip):
+    """Remove a printer by IP. Returns True if found and removed."""
+    printers = load_printers()
+    filtered = [p for p in printers if p["ip"] != ip]
+    if len(filtered) == len(printers):
+        return False
+    save_printers(filtered)
+    return True
+
+
+PRINTERS = load_printers()
 
 OID_SUPPLY_DESC  = "1.3.6.1.2.1.43.11.1.1.6.1"
 OID_SUPPLY_MAX   = "1.3.6.1.2.1.43.11.1.1.8.1"

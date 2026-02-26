@@ -226,6 +226,39 @@
       border: 1px solid #fca5a5; border-radius: 8px;
       padding: 14px 16px; color: #991b1b; font-size: .85rem;
     }
+
+    /* ── Add Printer Form ──────────────────────────────────── */
+    .add-form {
+      max-width: 1380px; margin: 0 auto; padding: 16px 24px 0;
+    }
+    .add-form-inner {
+      background: var(--card); border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+      padding: 14px 18px;
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .add-form-inner input {
+      font-size: .85rem; padding: 6px 10px;
+      border: 1px solid var(--border); border-radius: 6px;
+      outline: none;
+    }
+    .add-form-inner input:focus { border-color: var(--accent); }
+    .add-form-inner .ip-input  { width: 150px; }
+    .add-form-inner .name-input { width: 200px; }
+    .add-form-inner .form-label {
+      font-size: .75rem; font-weight: 600; color: var(--muted);
+    }
+    .resolve-status {
+      font-size: .78rem; color: var(--muted); font-style: italic;
+    }
+
+    /* ── Remove button ──────────────────────────────────────── */
+    .btn-remove {
+      background: transparent; border: none; color: rgba(255,255,255,.5);
+      cursor: pointer; font-size: 1.1rem; padding: 2px 6px; border-radius: 4px;
+      transition: color .15s, background .15s; line-height: 1;
+    }
+    .btn-remove:hover { color: #fff; background: rgba(255,255,255,.15); }
   </style>
 </head>
 
@@ -249,13 +282,21 @@
     </div>
   </header>
 
+  <div class="add-form">
+    <div class="add-form-inner">
+      <span class="form-label">Add Printer</span>
+      <input class="ip-input" id="addIp" type="text" placeholder="IP address">
+      <button class="btn btn-sm" id="resolveBtn" onclick="resolveIp()">Resolve</button>
+      <input class="name-input" id="addName" type="text" placeholder="Name (auto-resolved)">
+      <button class="btn btn-sm" id="addBtn" onclick="addPrinter()">+ Add</button>
+      <span class="resolve-status" id="resolveStatus"></span>
+    </div>
+  </div>
+
   <main id="grid"></main>
 
   <script>
-  const PRINTERS = [
-    { ip: "192.168.1.210", name: "Kyocera Kontor" },
-    { ip: "192.168.1.211", name: "Kyocera Kitte" },
-  ];
+  let PRINTERS = [];
 
   const COLORS = {
     Cyan:    { bar: "#00bcd4", dot: "#00bcd4" },
@@ -299,8 +340,12 @@
             <div class="printer-name">${p.name}</div>
             <div class="printer-ip">${p.ip}</div>
           </div>
-          <button class="btn btn-sm"
-            onclick="refreshPrinter('${p.ip}','${p.name}')">↻ Refresh</button>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="btn btn-sm"
+              onclick="refreshPrinter('${p.ip}','${p.name}')">↻ Refresh</button>
+            <button class="btn-remove" title="Remove printer"
+              onclick="removePrinter('${p.ip}','${p.name}')">✕</button>
+          </div>
         </div>
         <div class="card-content">
           <div class="loading-state"><div class="spinner"></div><span>Querying printer…</span></div>
@@ -487,9 +532,80 @@
   }
 
   // ── Boot ──────────────────────────────────────────────────────────────────
-  document.getElementById("grid").innerHTML = PRINTERS.map(skeletonCard).join("");
-  setupAutoRefresh();
-  refreshAll();
+  // ── Resolve / Add / Remove ──────────────────────────────────────────
+
+  async function resolveIp() {
+    const ip = document.getElementById("addIp").value.trim();
+    const status = document.getElementById("resolveStatus");
+    if (!ip) { status.textContent = "Enter an IP first"; return; }
+    status.textContent = "Resolving…";
+    try {
+      const res = await fetch(`/kyocera/api/resolve?ip=${encodeURIComponent(ip)}`);
+      const data = await res.json();
+      document.getElementById("addName").value = data.name || "";
+      status.textContent = data.name !== ip ? `Resolved: ${data.name}` : "No hostname found, using IP";
+    } catch (err) {
+      status.textContent = `Error: ${err.message}`;
+    }
+  }
+
+  async function addPrinter() {
+    const ip   = document.getElementById("addIp").value.trim();
+    const name = document.getElementById("addName").value.trim();
+    const status = document.getElementById("resolveStatus");
+    if (!ip) { status.textContent = "Enter an IP first"; return; }
+    status.textContent = "Adding…";
+    try {
+      const res = await fetch("/kyocera/api/printers", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ ip, name: name || undefined }),
+      });
+      const entry = await res.json();
+      if (entry.error) { status.textContent = entry.error; return; }
+      if (!PRINTERS.find(p => p.ip === entry.ip)) {
+        PRINTERS.push(entry);
+        document.getElementById("grid").insertAdjacentHTML("beforeend", skeletonCard(entry));
+        refreshPrinter(entry.ip, entry.name);
+      }
+      document.getElementById("addIp").value = "";
+      document.getElementById("addName").value = "";
+      status.textContent = `Added ${entry.name}`;
+    } catch (err) {
+      status.textContent = `Error: ${err.message}`;
+    }
+  }
+
+  async function removePrinter(ip, name) {
+    if (!confirm(`Remove printer "${name}" (${ip})?`)) return;
+    try {
+      await fetch("/kyocera/api/printers", {
+        method: "DELETE",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ ip }),
+      });
+      PRINTERS = PRINTERS.filter(p => p.ip !== ip);
+      const card = document.getElementById(cardId(ip));
+      if (card) card.remove();
+    } catch (err) {
+      alert(`Failed to remove printer: ${err.message}`);
+    }
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────
+  async function boot() {
+    try {
+      const res = await fetch("/kyocera/api/printers");
+      PRINTERS = await res.json();
+    } catch (err) {
+      PRINTERS = [];
+    }
+    document.getElementById("grid").innerHTML = PRINTERS.map(skeletonCard).join("");
+    setupAutoRefresh();
+    refreshAll();
+  }
+
+  boot();
   </script>
 </body>
 </html>
