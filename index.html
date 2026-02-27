@@ -423,6 +423,7 @@
             <th>Pages since install</th>
             <th>Est. Coverage</th>
             <th>Eff. Yield</th>
+            <th>Days Left</th>
           </tr>
         </thead>
         <tbody>`;
@@ -460,6 +461,16 @@
         yieldCell = "—";
       }
 
+      // Days left
+      let daysCell;
+      if (s.days_left !== null && s.days_left !== undefined) {
+        const cls      = s.days_left < 7 ? "danger" : s.days_left < 30 ? "warn" : "ok";
+        const earlyTag = !s.coverage_reliable ? `<span class="tag tag-early">early</span>` : "";
+        daysCell = `<span class="${cls}">${s.days_left}d</span>${earlyTag}`;
+      } else {
+        daysCell = "—";
+      }
+
       cov += `
         <tr>
           <td>
@@ -469,6 +480,7 @@
           <td>${pagesSince}</td>
           <td>${covCell}</td>
           <td>${yieldCell}</td>
+          <td>${daysCell}</td>
         </tr>`;
     }
 

@@ -157,7 +157,7 @@ def save_log(data):
 
 # ── Per-supply log update & coverage calculation ──────────────────────────────
 
-def apply_log(log, ip, name, page_count, level, max_val, timestamp):
+def apply_log(log, ip, name, page_count, level, max_val, timestamp, record_snapshot=False):
     """
     Update log[ip][name] in-place with the latest SNMP reading.
 
@@ -165,6 +165,8 @@ def apply_log(log, ip, name, page_count, level, max_val, timestamp):
     - If the toner level has risen by more than REPLACEMENT_THRESHOLD since the
       last reading, records a new baseline (cartridge replaced).
     - Calculates coverage metrics from the delta since the current baseline.
+    - When record_snapshot=True and no other event was recorded, appends a
+      "snapshot" history entry (used by the daily cron job).
 
     Returns a dict of coverage fields to merge into the supply record.
     """
@@ -224,6 +226,16 @@ def apply_log(log, ip, name, page_count, level, max_val, timestamp):
             "page_count": page_count,
         }
 
+    # ── Optional daily snapshot ───────────────────────────────────────────────
+    if record_snapshot and event is None:
+        entry["history"].append({
+            "event":      "snapshot",
+            "timestamp":  timestamp,
+            "page_count": page_count,
+            "level":      level,
+            "max":        max_val,
+        })
+
     # ── Coverage from baseline deltas ────────────────────────────────────────
     bl             = entry["baseline"]
     consumed_since = bl["level"] - level          # rated-page units consumed since install
@@ -241,6 +253,19 @@ def apply_log(log, ip, name, page_count, level, max_val, timestamp):
         eff_yield    = round(bl["max"] * (pages_since / consumed_since))
         reliable     = pages_since >= MIN_RELIABLE_PAGES
 
+    # ── Days-left estimation ──────────────────────────────────────────────────
+    days_left = None
+    if consumed_since > 0 and level > 0:
+        try:
+            bl_ts      = datetime.strptime(bl["timestamp"], "%Y-%m-%d %H:%M:%S")
+            now_ts     = datetime.strptime(timestamp,       "%Y-%m-%d %H:%M:%S")
+            days_since = (now_ts - bl_ts).total_seconds() / 86400.0
+            if days_since > 0:
+                rate_per_day = consumed_since / days_since
+                days_left    = round(level / rate_per_day)
+        except (ValueError, ZeroDivisionError):
+            pass
+
     return {
         "install_timestamp":      bl["timestamp"],
         "install_page_count":     bl["page_count"],
@@ -250,13 +275,14 @@ def apply_log(log, ip, name, page_count, level, max_val, timestamp):
         "estimated_coverage":     est_coverage,
         "effective_yield":        eff_yield,
         "coverage_reliable":      reliable,
+        "days_left":              days_left,
         "cartridge_event":        event,   # "initial" | "replaced" | None
     }
 
 
 # ── Main query ────────────────────────────────────────────────────────────────
 
-def check_printer(ip, community="public"):
+def check_printer(ip, community="public", record_snapshot=False):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if snmp_get(ip, community, f"{OID_SUPPLY_DESC}.1") is None:
@@ -297,7 +323,7 @@ def check_printer(ip, community="public"):
 
         cov = {}
         if page_count is not None:
-            cov = apply_log(log, ip, name, page_count, level_val, max_val, timestamp)
+            cov = apply_log(log, ip, name, page_count, level_val, max_val, timestamp, record_snapshot)
 
         supplies.append({
             "name":        name,
