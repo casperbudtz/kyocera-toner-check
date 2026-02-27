@@ -27,6 +27,24 @@ python3 /path/to/command-central/server.py
 # Open http://localhost:8080/kyocera/
 ```
 
+The dashboard shows live toner levels, coverage estimation, and **estimated days remaining** per cartridge based on your actual consumption rate.
+
+### Daily cron snapshot (recommended)
+
+`cron_check.py` records a toner snapshot once a day, building the history that powers the days-left estimate. Set it up once:
+
+```bash
+crontab -e
+# Add:
+55 23 * * * /usr/bin/python3 /path/to/kyocera/cron_check.py >> /path/to/kyocera/cron.log 2>&1
+```
+
+You can also trigger it manually at any time:
+
+```bash
+python3 cron_check.py
+```
+
 ### Bash CLI (standalone)
 
 ```bash
@@ -81,7 +99,7 @@ The script produces two sections:
   Black              1770      12453        0.71%         49,254
 ```
 
-## How Coverage Is Calculated
+## How Coverage and Days Left Are Calculated
 
 The SNMP max/current values are expressed in pages at 5% coverage. The script derives:
 
@@ -89,9 +107,10 @@ The SNMP max/current values are expressed in pages at 5% coverage. The script de
 consumed        = max - current        (toner used, in 5%-coverage-page units)
 actual_coverage = (consumed / pages_printed) × 5%
 effective_yield = max × (pages_printed / consumed)
+days_left       = current / (consumed / days_since_install)
 ```
 
-> Coverage estimates improve as more toner is consumed. Results from nearly-full cartridges are unreliable — best to run this periodically across a full cartridge lifecycle.
+> Estimates improve as more toner is consumed. Results from nearly-full cartridges are noisy — the dashboard marks them "early" until 100 pages have been printed since install. Run the daily cron job (`cron_check.py`) for the most accurate days-left projection over a full cartridge lifecycle.
 
 ## Cartridges (TK-5370 series)
 
