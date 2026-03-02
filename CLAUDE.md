@@ -77,6 +77,14 @@ Base: `1.3.6.1.2.1.43`
 | `.11.1.1.9.1.x`      | Current level (remaining pages at 5%)      |
 | `.10.2.1.4.1.1`      | Total printed page count                   |
 
+Kyocera vendor MIB base: `1.3.6.1.4.1.1347.42.2.1.1.1`
+
+| OID suffix | Description               |
+|------------|---------------------------|
+| `.6.1.1`   | Total page count (all)    |
+| `.7.1.1`   | Mono (B&W) page count     |
+| `.8.1.1`   | Color page count          |
+
 Supply indices: 1=Cyan, 2=Magenta, 3=Yellow, 4=Black, 5=Waste Toner Box
 
 Waste toner level values: `-3` = OK, `-1` = Unknown, `0` = Full/replace.

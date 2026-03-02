@@ -359,12 +359,15 @@
       return `<div class="error-box">⚠ ${data.error}</div>`;
     }
 
-    const { supplies, page_count, waste_toner, timestamp } = data;
+    const { supplies, page_count, page_count_mono, page_count_color, waste_toner, timestamp } = data;
 
     // Meta
+    const pageBreakdown = (page_count_mono != null && page_count_color != null)
+      ? ` &nbsp;·&nbsp; B&amp;W: <strong>${fmt(page_count_mono)}</strong> &nbsp;·&nbsp; Color: <strong>${fmt(page_count_color)}</strong>`
+      : "";
     const meta = `
       <div class="card-meta">
-        <span>Total Pages: <strong>${fmt(page_count)}</strong></span>
+        <span>Total Pages: <strong>${fmt(page_count)}</strong>${pageBreakdown}</span>
         <span>Updated: <strong>${timestamp}</strong></span>
       </div>`;
 
@@ -420,7 +423,7 @@
           <tr>
             <th>Supply</th>
             <th>Installed</th>
-            <th>Pages since install</th>
+            <th>Pages since install¹</th>
             <th>Est. Coverage</th>
             <th>Eff. Yield</th>
             <th>Days Left</th>
@@ -498,7 +501,7 @@
       note = `No toner has been consumed since the current cartridges were installed yet.`;
     }
 
-    cov += `<div class="coverage-note">${note}</div>`;
+    cov += `<div class="coverage-note">${note}<br><span style="opacity:.7">¹ B&amp;W pages for Black; color pages for Cyan/Magenta/Yellow.</span></div>`;
 
     return meta + toner + cov + `</div>`;  // close card-body
   }

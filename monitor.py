@@ -108,10 +108,12 @@ def remove_printer(ip):
 
 PRINTERS = load_printers()
 
-OID_SUPPLY_DESC  = "1.3.6.1.2.1.43.11.1.1.6.1"
-OID_SUPPLY_MAX   = "1.3.6.1.2.1.43.11.1.1.8.1"
-OID_SUPPLY_LEVEL = "1.3.6.1.2.1.43.11.1.1.9.1"
-OID_PAGE_COUNT   = "1.3.6.1.2.1.43.10.2.1.4.1.1"
+OID_SUPPLY_DESC    = "1.3.6.1.2.1.43.11.1.1.6.1"
+OID_SUPPLY_MAX     = "1.3.6.1.2.1.43.11.1.1.8.1"
+OID_SUPPLY_LEVEL   = "1.3.6.1.2.1.43.11.1.1.9.1"
+OID_PAGE_COUNT     = "1.3.6.1.2.1.43.10.2.1.4.1.1"
+OID_PAGE_COUNT_MONO  = "1.3.6.1.4.1.1347.42.2.1.1.1.7.1.1"
+OID_PAGE_COUNT_COLOR = "1.3.6.1.4.1.1347.42.2.1.1.1.8.1.1"
 
 SUPPLY_NAMES   = ["Cyan", "Magenta", "Yellow", "Black"]
 SUPPLY_INDICES = [1, 2, 3, 4]
@@ -298,6 +300,18 @@ def check_printer(ip, community="public", record_snapshot=False):
     except (TypeError, ValueError):
         pass
 
+    page_count_mono = None
+    try:
+        page_count_mono = int(snmp_get(ip, community, OID_PAGE_COUNT_MONO))
+    except (TypeError, ValueError):
+        pass
+
+    page_count_color = None
+    try:
+        page_count_color = int(snmp_get(ip, community, OID_PAGE_COUNT_COLOR))
+    except (TypeError, ValueError):
+        pass
+
     log = load_log()
     supplies = []
 
@@ -321,9 +335,16 @@ def check_printer(ip, community="public", record_snapshot=False):
         pct        = (level_val / max_val) * 100
         is_starter = (max_val < FULL_CAPACITY_CMY) if i < 3 else (max_val < FULL_CAPACITY_K)
 
+        # Use type-specific page count for coverage accuracy:
+        # Black toner consumption correlates with mono pages; CMY with color pages.
+        if name == "Black":
+            pc_for_supply = page_count_mono if page_count_mono is not None else page_count
+        else:
+            pc_for_supply = page_count_color if page_count_color is not None else page_count
+
         cov = {}
-        if page_count is not None:
-            cov = apply_log(log, ip, name, page_count, level_val, max_val, timestamp, record_snapshot)
+        if pc_for_supply is not None:
+            cov = apply_log(log, ip, name, pc_for_supply, level_val, max_val, timestamp, record_snapshot)
 
         supplies.append({
             "name":        name,
@@ -349,10 +370,12 @@ def check_printer(ip, community="public", record_snapshot=False):
         pass
 
     return {
-        "printer_ip":  ip,
-        "timestamp":   timestamp,
-        "page_count":  page_count,
-        "supplies":    supplies,
-        "waste_toner": {"status": waste_status},
-        "error":       None,
+        "printer_ip":        ip,
+        "timestamp":         timestamp,
+        "page_count":        page_count,
+        "page_count_mono":   page_count_mono,
+        "page_count_color":  page_count_color,
+        "supplies":          supplies,
+        "waste_toner":       {"status": waste_status},
+        "error":             None,
     }
