@@ -85,6 +85,10 @@ Kyocera vendor MIB base: `1.3.6.1.4.1.1347.42.2.1.1.1`
 | `.7.1.1`   | Mono (B&W) page count     |
 | `.8.1.1`   | Color page count          |
 
+Page count used per supply for coverage calculation:
+- **Black**: total page count (Black is consumed by both B&W and color prints)
+- **CMY**: color page count only (CMY are not consumed by B&W prints)
+
 Supply indices: 1=Cyan, 2=Magenta, 3=Yellow, 4=Black, 5=Waste Toner Box
 
 Waste toner level values: `-3` = OK, `-1` = Unknown, `0` = Full/replace.

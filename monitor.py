@@ -336,9 +336,10 @@ def check_printer(ip, community="public", record_snapshot=False):
         is_starter = (max_val < FULL_CAPACITY_CMY) if i < 3 else (max_val < FULL_CAPACITY_K)
 
         # Use type-specific page count for coverage accuracy:
-        # Black toner consumption correlates with mono pages; CMY with color pages.
+        # Black is consumed by every print (B&W and color), so use total page count.
+        # CMY are only consumed by color prints, so use color page count.
         if name == "Black":
-            pc_for_supply = page_count_mono if page_count_mono is not None else page_count
+            pc_for_supply = page_count
         else:
             pc_for_supply = page_count_color if page_count_color is not None else page_count
 
