@@ -6,5 +6,9 @@
   {
     "ip": "192.168.1.211",
     "name": "Kyocera Kitte"
+  },
+  {
+    "ip": "192.168.1.212",
+    "name": "Kyocera Mette"
   }
 ]

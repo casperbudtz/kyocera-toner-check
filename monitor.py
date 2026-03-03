@@ -9,6 +9,7 @@ Imported by the top-level server.py; not intended to be run standalone.
 
 import json
 import os
+import re
 import socket
 import subprocess
 from datetime import datetime
@@ -109,6 +110,7 @@ def remove_printer(ip):
 PRINTERS = load_printers()
 
 OID_SUPPLY_DESC    = "1.3.6.1.2.1.43.11.1.1.6.1"
+OID_SUPPLY_TYPE    = "1.3.6.1.2.1.43.11.1.1.4.1"   # 3=toner, 4=wasteToner
 OID_SUPPLY_MAX     = "1.3.6.1.2.1.43.11.1.1.8.1"
 OID_SUPPLY_LEVEL   = "1.3.6.1.2.1.43.11.1.1.9.1"
 OID_PAGE_COUNT     = "1.3.6.1.2.1.43.10.2.1.4.1.1"
@@ -116,10 +118,31 @@ OID_PAGE_COUNT_MONO  = "1.3.6.1.4.1.1347.42.2.1.1.1.7.1.1"
 OID_PAGE_COUNT_COLOR = "1.3.6.1.4.1.1347.42.2.1.1.1.8.1.1"
 
 SUPPLY_NAMES   = ["Cyan", "Magenta", "Yellow", "Black"]
-SUPPLY_INDICES = [1, 2, 3, 4]
+SUPPLY_INDICES = [1, 2, 3, 4, 5]
 
 FULL_CAPACITY_CMY = 5000
 FULL_CAPACITY_K   = 7000
+
+
+def _supply_name_from_desc(desc):
+    """Derive canonical supply name (Cyan/Magenta/Yellow/Black) from SNMP description.
+
+    Handles both full colour words (generic printers) and Kyocera model-number
+    suffixes where the colour is encoded as a single letter before an optional
+    S (starter) suffix, e.g. TK-5370CS=Cyan, TK-5370KS=Black.
+    """
+    d = (desc or "").lower()
+    # Full colour words
+    if "cyan"    in d: return "Cyan"
+    if "magenta" in d: return "Magenta"
+    if "yellow"  in d: return "Yellow"
+    if "black"   in d: return "Black"
+    # Kyocera model-number colour suffixes: …CS / …C, …MS / …M, …YS / …Y, …KS / …K
+    if re.search(r'cs?$', d): return "Cyan"
+    if re.search(r'ms?$', d): return "Magenta"
+    if re.search(r'ys?$', d): return "Yellow"
+    if re.search(r'ks?$', d): return "Black"
+    return None
 
 
 # ── SNMP ──────────────────────────────────────────────────────────────────────
@@ -133,9 +156,10 @@ def snmp_get(ip, community, oid):
             ["snmpget", "-v2c", "-c", community, "-Oqv", ip, oid],
             capture_output=True, text=True, timeout=5, env=env,
         )
-        if r.returncode != 0 or not r.stdout.strip():
+        val = r.stdout.strip()
+        if r.returncode != 0 or not val or val.lower().startswith("no such"):
             return None
-        return r.stdout.strip().strip('"')
+        return val.strip('"')
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return None
 
@@ -314,10 +338,38 @@ def check_printer(ip, community="public", record_snapshot=False):
 
     log = load_log()
     supplies = []
+    waste_toner = None
 
-    for i, idx in enumerate(SUPPLY_INDICES):
-        name      = SUPPLY_NAMES[i]
-        desc      = snmp_get(ip, community, f"{OID_SUPPLY_DESC}.{idx}") or "?"
+    for idx in SUPPLY_INDICES:
+        desc_raw = snmp_get(ip, community, f"{OID_SUPPLY_DESC}.{idx}")
+        if desc_raw is None:
+            continue  # supply slot not present on this printer
+
+        # Determine supply type: 4 = wasteToner; anything else assumed toner.
+        try:
+            supply_type = int(snmp_get(ip, community, f"{OID_SUPPLY_TYPE}.{idx}"))
+        except (TypeError, ValueError):
+            supply_type = None
+
+        if supply_type == 4:
+            # Waste toner box — record status and move on.
+            level_raw = snmp_get(ip, community, f"{OID_SUPPLY_LEVEL}.{idx}")
+            try:
+                wv = int(level_raw)
+                if wv == -3:
+                    waste_toner = {"status": "OK"}
+                elif wv == 0:
+                    waste_toner = {"status": "FULL — replace!"}
+                else:
+                    waste_toner = {"status": "Unknown"}
+            except (TypeError, ValueError):
+                waste_toner = {"status": "Unknown"}
+            continue
+
+        # Toner supply — derive name from description, default to Black
+        # (B&W printers often report the cartridge model number, not a colour).
+        name = _supply_name_from_desc(desc_raw) or "Black"
+
         max_raw   = snmp_get(ip, community, f"{OID_SUPPLY_MAX}.{idx}")
         level_raw = snmp_get(ip, community, f"{OID_SUPPLY_LEVEL}.{idx}")
 
@@ -325,15 +377,15 @@ def check_printer(ip, community="public", record_snapshot=False):
             max_val   = int(max_raw)
             level_val = int(level_raw)
         except (TypeError, ValueError):
-            supplies.append({"name": name, "description": desc, "error": True})
+            supplies.append({"name": name, "description": desc_raw, "error": True})
             continue
 
         if max_val <= 0:
-            supplies.append({"name": name, "description": desc, "error": True})
+            supplies.append({"name": name, "description": desc_raw, "error": True})
             continue
 
         pct        = (level_val / max_val) * 100
-        is_starter = (max_val < FULL_CAPACITY_CMY) if i < 3 else (max_val < FULL_CAPACITY_K)
+        is_starter = (max_val < FULL_CAPACITY_CMY) if name != "Black" else (max_val < FULL_CAPACITY_K)
 
         # Use type-specific page count for coverage accuracy:
         # Black is consumed by every print (B&W and color), so use total page count.
@@ -349,7 +401,7 @@ def check_printer(ip, community="public", record_snapshot=False):
 
         supplies.append({
             "name":        name,
-            "description": desc,
+            "description": desc_raw,
             "is_starter":  is_starter,
             "max":         max_val,
             "current":     level_val,
@@ -359,17 +411,6 @@ def check_printer(ip, community="public", record_snapshot=False):
 
     save_log(log)
 
-    waste_raw    = snmp_get(ip, community, f"{OID_SUPPLY_LEVEL}.5")
-    waste_status = "Unknown"
-    try:
-        wv = int(waste_raw)
-        if wv == -3:
-            waste_status = "OK"
-        elif wv == 0:
-            waste_status = "FULL — replace!"
-    except (TypeError, ValueError):
-        pass
-
     return {
         "printer_ip":        ip,
         "timestamp":         timestamp,
@@ -377,6 +418,6 @@ def check_printer(ip, community="public", record_snapshot=False):
         "page_count_mono":   page_count_mono,
         "page_count_color":  page_count_color,
         "supplies":          supplies,
-        "waste_toner":       {"status": waste_status},
+        "waste_toner":       waste_toner,
         "error":             None,
     }
