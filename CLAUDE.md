@@ -9,9 +9,11 @@ Toner monitoring tools for Kyocera printers (color and B&W) via SNMP. Used to ev
 Files:
 - `kyocera_toner_check.sh` — standalone bash CLI for manual spot-checks
 - `monitor.py` — **library module** (not a standalone server); exposes business logic imported by the top-level `command-central` server
-- `cron_check.py` — daily cron script; calls `check_printer(record_snapshot=True)` for every printer and appends a history entry to `toner_log.json`
+- `cron_check.py` — daily cron script; queries all printers, appends a history snapshot to `toner_log.json`, and sends low-toner alert emails (once per cartridge lifetime)
 - `index.html` — browser dashboard; served at `/kyocera/` by the top-level server
-- `printers.json` — persistent printer list (managed via `add_printer()`/`remove_printer()` or direct JSON edit)
+- `printers.json` — persistent printer list (managed via `add_printer()`/`remove_printer()` or direct JSON edit); names are set manually
+- `kyocera_config.json` — notification settings (`notify_enabled`, `notify_days_threshold`); managed via the dashboard UI or direct JSON edit (auto-created)
+- `notify_sent.json` — deduplication state for email alerts; tracks `{ip: {supply_name: install_timestamp}}` of already-notified cartridges (auto-managed by `cron_check.py`)
 - `toner_log.json` — toner history; keyed by IP → supply name; includes baseline, last_seen, and a `history[]` array of `initial`/`replaced`/`snapshot` events
 - `cron.log` — stdout/stderr output from `cron_check.py` (auto-created)
 
@@ -49,9 +51,10 @@ Requires `snmpget` (from `snmp` package: `sudo apt install snmp`).
 | `PRINTERS` | list | Printer dicts (`ip`, `name`), loaded from `printers.json` on import |
 | `load_printers()` | function | Read printer list from `printers.json` |
 | `save_printers(printers)` | function | Atomically write printer list to `printers.json` |
-| `resolve_name(ip)` | function | Resolve hostname via reverse DNS, then NetBIOS (`nmblookup`), fallback to raw IP |
-| `add_printer(ip, name=None)` | function | Add printer (auto-resolves name if omitted), persists to JSON, returns entry |
+| `add_printer(ip, name=None)` | function | Add printer (uses IP as name if omitted), persists to JSON, returns entry |
 | `remove_printer(ip)` | function | Remove printer by IP, persists to JSON, returns `True`/`False` |
+| `load_config()` | function | Read `kyocera_config.json` (returns defaults if missing) |
+| `save_config(cfg)` | function | Atomically write `kyocera_config.json` |
 | `check_printer(ip, community, record_snapshot=False)` | function | Full SNMP query; returns toner/coverage JSON. Pass `record_snapshot=True` to append a history entry (used by cron). |
 | `load_log()` | function | Read `toner_log.json` |
 | `save_log(data)` | function | Atomically write `toner_log.json` |
@@ -167,5 +170,4 @@ A PowerShell PRTG EXE/Script sensor was attempted but failed (PRTG server on Win
 ## Potential Enhancements
 
 - CSV export of `toner_log.json` history for trending in spreadsheets
-- Alert thresholds (e.g. email when toner < X% or days_left < N)
 - Cost-per-page calculation with configurable cartridge prices
