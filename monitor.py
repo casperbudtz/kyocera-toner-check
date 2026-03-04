@@ -10,7 +10,6 @@ Imported by the top-level server.py; not intended to be run standalone.
 import json
 import os
 import re
-import socket
 import subprocess
 from datetime import datetime
 
@@ -49,50 +48,14 @@ def save_printers(printers):
     os.replace(tmp, PRINTERS_FILE)
 
 
-def resolve_name(ip):
-    """Try to resolve a human-readable name for the given IP.
-
-    Attempts in order:
-      1. Reverse DNS (socket.gethostbyaddr)
-      2. NetBIOS lookup (nmblookup -A)
-      3. Falls back to the raw IP string
-    """
-    # 1. Reverse DNS
-    try:
-        hostname = socket.gethostbyaddr(ip)[0]
-        if hostname and hostname != ip:
-            return hostname
-    except (socket.herror, socket.gaierror, OSError):
-        pass
-
-    # 2. NetBIOS via nmblookup
-    try:
-        r = subprocess.run(
-            ["nmblookup", "-A", ip],
-            capture_output=True, text=True, timeout=5,
-        )
-        if r.returncode == 0:
-            for line in r.stdout.splitlines():
-                line = line.strip()
-                if "<00>" in line and "<UNIQUE>" in line.upper():
-                    return line.split()[0]
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        pass
-
-    # 3. Fallback
-    return ip
-
-
 def add_printer(ip, name=None):
-    """Add a printer. Resolves name if not provided. Returns the new entry."""
+    """Add a printer. Uses IP as name if not provided. Returns the new entry."""
     printers = load_printers()
     # Avoid duplicates
     for p in printers:
         if p["ip"] == ip:
             return p
-    if not name:
-        name = resolve_name(ip)
-    entry = {"ip": ip, "name": name}
+    entry = {"ip": ip, "name": name or ip}
     printers.append(entry)
     save_printers(printers)
     return entry

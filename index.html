@@ -591,49 +591,7 @@
   }
 
   // ── Boot ──────────────────────────────────────────────────────────────────
-  // ── Resolve / Add / Remove ──────────────────────────────────────────
-
-  async function resolveIp() {
-    const ip = document.getElementById("addIp").value.trim();
-    const status = document.getElementById("resolveStatus");
-    if (!ip) { status.textContent = "Enter an IP first"; return; }
-    status.textContent = "Resolving…";
-    try {
-      const res = await fetch(`/kyocera/api/resolve?ip=${encodeURIComponent(ip)}`);
-      const data = await res.json();
-      document.getElementById("addName").value = data.name || "";
-      status.textContent = data.name !== ip ? `Resolved: ${data.name}` : "No hostname found, using IP";
-    } catch (err) {
-      status.textContent = `Error: ${err.message}`;
-    }
-  }
-
-  async function addPrinter() {
-    const ip   = document.getElementById("addIp").value.trim();
-    const name = document.getElementById("addName").value.trim();
-    const status = document.getElementById("resolveStatus");
-    if (!ip) { status.textContent = "Enter an IP first"; return; }
-    status.textContent = "Adding…";
-    try {
-      const res = await fetch("/kyocera/api/printers", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ ip, name: name || undefined }),
-      });
-      const entry = await res.json();
-      if (entry.error) { status.textContent = entry.error; return; }
-      if (!PRINTERS.find(p => p.ip === entry.ip)) {
-        PRINTERS.push(entry);
-        document.getElementById("grid").insertAdjacentHTML("beforeend", skeletonCard(entry));
-        refreshPrinter(entry.ip, entry.name);
-      }
-      document.getElementById("addIp").value = "";
-      document.getElementById("addName").value = "";
-      status.textContent = `Added ${entry.name}`;
-    } catch (err) {
-      status.textContent = `Error: ${err.message}`;
-    }
-  }
+  // ── Remove ──────────────────────────────────────────────────────────────
 
   async function removePrinter(ip, name) {
     if (!confirm(`Remove printer "${name}" (${ip})?`)) return;
