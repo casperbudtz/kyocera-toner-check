@@ -17,6 +17,7 @@ from datetime import datetime
 SCRIPT_DIR     = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE       = os.path.join(SCRIPT_DIR, "toner_log.json")
 PRINTERS_FILE  = os.path.join(SCRIPT_DIR, "printers.json")
+CONFIG_FILE    = os.path.join(SCRIPT_DIR, "kyocera_config.json")
 
 # A cartridge replacement is recorded when the toner level both rises by
 # more than this many rated pages AND is at or above 85 % of max capacity
@@ -109,6 +110,31 @@ def remove_printer(ip):
 
 PRINTERS = load_printers()
 
+
+# ── Kyocera config persistence ────────────────────────────────────────────────
+
+_CONFIG_DEFAULTS = {
+    "notify_enabled":        False,
+    "notify_days_threshold": 7,
+}
+
+def load_config():
+    """Load Kyocera notification config from kyocera_config.json."""
+    try:
+        with open(CONFIG_FILE) as f:
+            return {**_CONFIG_DEFAULTS, **json.load(f)}
+    except (FileNotFoundError, json.JSONDecodeError):
+        return dict(_CONFIG_DEFAULTS)
+
+
+def save_config(cfg):
+    """Atomically write Kyocera config to kyocera_config.json."""
+    merged = {**_CONFIG_DEFAULTS, **cfg}
+    tmp = CONFIG_FILE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(merged, f, indent=2)
+    os.replace(tmp, CONFIG_FILE)
+
 OID_SUPPLY_DESC    = "1.3.6.1.2.1.43.11.1.1.6.1"
 OID_SUPPLY_TYPE    = "1.3.6.1.2.1.43.11.1.1.4.1"   # 3=toner, 4=wasteToner
 OID_SUPPLY_MAX     = "1.3.6.1.2.1.43.11.1.1.8.1"
@@ -142,6 +168,21 @@ def _supply_name_from_desc(desc):
     if re.search(r'ms?$', d): return "Magenta"
     if re.search(r'ys?$', d): return "Yellow"
     if re.search(r'ks?$', d): return "Black"
+    return None
+
+
+def _extract_product_model(desc):
+    """Extract the clean Kyocera product model number from an SNMP description.
+
+    'TK-5370CS' → 'TK-5370C'  (strip trailing S = starter marker)
+    'TK-3400'   → 'TK-3400'   (B&W mono, no colour suffix)
+    'Cyan Toner' → None        (generic word description, no model number)
+    """
+    if not desc:
+        return None
+    m = re.match(r'^(TK-\d+[CMYK]?)S?$', desc.strip(), re.IGNORECASE)
+    if m:
+        return m.group(1).upper()
     return None
 
 
@@ -377,11 +418,11 @@ def check_printer(ip, community="public", record_snapshot=False):
             max_val   = int(max_raw)
             level_val = int(level_raw)
         except (TypeError, ValueError):
-            supplies.append({"name": name, "description": desc_raw, "error": True})
+            supplies.append({"name": name, "description": desc_raw, "product_model": _extract_product_model(desc_raw), "error": True})
             continue
 
         if max_val <= 0:
-            supplies.append({"name": name, "description": desc_raw, "error": True})
+            supplies.append({"name": name, "description": desc_raw, "product_model": _extract_product_model(desc_raw), "error": True})
             continue
 
         pct        = (level_val / max_val) * 100
@@ -400,9 +441,10 @@ def check_printer(ip, community="public", record_snapshot=False):
             cov = apply_log(log, ip, name, pc_for_supply, level_val, max_val, timestamp, record_snapshot)
 
         supplies.append({
-            "name":        name,
-            "description": desc_raw,
-            "is_starter":  is_starter,
+            "name":          name,
+            "description":   desc_raw,
+            "product_model": _extract_product_model(desc_raw),
+            "is_starter":    is_starter,
             "max":         max_val,
             "current":     level_val,
             "percent":     round(pct, 1),

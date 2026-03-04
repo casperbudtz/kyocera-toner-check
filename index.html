@@ -263,6 +263,54 @@
 
   <main id="grid"></main>
 
+  <section style="max-width:700px;margin:24px auto 52px;padding:0 24px;">
+    <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
+                color:#6b7280;margin-bottom:12px;">Email Notifications</div>
+    <div style="background:#fff;border:1px solid #e0e4ea;border-radius:10px;padding:20px 24px;
+                box-shadow:0 1px 4px rgba(0,0,0,.04);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+        <div style="width:36px;height:36px;background:#e8f0fe;border-radius:8px;display:flex;
+                    align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">🔔</div>
+        <div>
+          <div style="font-size:.9rem;font-weight:700;">Low Toner Alerts</div>
+          <div style="font-size:.78rem;color:#6b7280;margin-top:2px;">
+            Send one email per cartridge lifetime when any toner falls below the threshold.
+            Resets automatically when a cartridge is replaced.
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;cursor:pointer;user-select:none;">
+          <input type="checkbox" id="notifyEnabled" style="accent-color:#0d6efd;width:15px;height:15px;">
+          Enable email notifications
+        </label>
+
+        <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;">
+          Notify when fewer than
+          <input type="number" id="notifyDays" min="1" max="365" value="7"
+                 style="width:56px;padding:4px 8px;border:1px solid #e0e4ea;border-radius:6px;
+                        font-size:.85rem;font-family:inherit;text-align:center;">
+          days remaining
+        </label>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap;">
+        <button onclick="saveKyoceraConfig()"
+                style="background:#0d6efd;color:#fff;border:none;padding:5px 14px;
+                       border-radius:6px;font-size:.78rem;font-weight:600;cursor:pointer;">
+          Save
+        </button>
+        <span id="notifyStatus" style="font-size:.78rem;color:#6b7280;"></span>
+        <div style="flex:1"></div>
+        <span style="font-size:.75rem;color:#6b7280;">
+          Requires SMTP to be configured in
+          <a href="/" style="color:#0d6efd;">Command Central</a>.
+        </span>
+      </div>
+    </div>
+  </section>
+
   <script>
   let PRINTERS = [];
 
@@ -274,6 +322,22 @@
   };
 
   function cardId(ip) { return "card_" + ip.replace(/\./g, "_"); }
+
+  function pricerunnerUrl(model) {
+    if (!model) return null;
+    const q = "Kyocera " + model.replace(/-/g, " ");
+    return `https://www.pricerunner.dk/results?q=${encodeURIComponent(q)}&suggestionsActive=true&suggestionClicked=false&suggestionReverted=false`;
+  }
+
+  function modelLink(model, style) {
+    const url = pricerunnerUrl(model);
+    if (!url) return "";
+    return `<a href="${url}" target="_blank" rel="noopener"
+               style="${style || 'color:var(--muted);text-decoration:none;'}"
+               onmouseover="this.style.color='var(--accent)'"
+               onmouseout="this.style.color='${style ? 'inherit' : 'var(--muted)'}'">
+              ${model} ↗</a>`;
+  }
 
   function barColor(pct, name) {
     if (pct <= 10) return "var(--danger)";
@@ -359,11 +423,17 @@
       const newBadge     = s.cartridge_event === "initial" || s.cartridge_event === "replaced"
         ? `<span class="badge tag-new">${s.cartridge_event === "replaced" ? "replaced" : "initial"}</span>` : "";
 
+      const modelSubLine = s.product_model
+        ? `<div style="font-size:.65rem;margin-top:2px;line-height:1">${modelLink(s.product_model)}</div>`
+        : "";
       toner += `
         <div class="toner-row">
-          <span class="toner-name">
-            <span class="dot" style="background:${c.dot ?? '#999'}"></span>${s.name}
-          </span>
+          <div class="toner-name" style="flex-direction:column;align-items:flex-start;gap:0">
+            <span style="display:flex;align-items:center;gap:6px">
+              <span class="dot" style="background:${c.dot ?? '#999'}"></span>${s.name}
+            </span>
+            ${modelSubLine}
+          </div>
           <div class="bar-track" title="${s.current} / ${s.max} pages remaining">
             <div class="bar-fill" style="width:${Math.max(1.5, s.percent)}%; background:${bc}"></div>
           </div>
@@ -581,6 +651,44 @@
     }
   }
 
+  // ── Kyocera notification config ──────────────────────────────────────────
+  async function loadKyoceraConfig() {
+    try {
+      const res = await fetch("/kyocera/api/config");
+      const cfg = await res.json();
+      document.getElementById("notifyEnabled").checked = !!cfg.notify_enabled;
+      document.getElementById("notifyDays").value = cfg.notify_days_threshold ?? 7;
+    } catch (err) {}
+  }
+
+  async function saveKyoceraConfig() {
+    const status = document.getElementById("notifyStatus");
+    status.textContent = "Saving…";
+    status.style.color = "#6b7280";
+    try {
+      const res = await fetch("/kyocera/api/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notify_enabled:        document.getElementById("notifyEnabled").checked,
+          notify_days_threshold: parseInt(document.getElementById("notifyDays").value) || 7,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        status.textContent = "Saved ✓";
+        status.style.color = "#16a34a";
+        setTimeout(() => { status.textContent = ""; }, 3000);
+      } else {
+        status.textContent = data.error || "Error";
+        status.style.color = "#dc2626";
+      }
+    } catch (err) {
+      status.textContent = "Network error";
+      status.style.color = "#dc2626";
+    }
+  }
+
   // ── Boot ──────────────────────────────────────────────────────────────
   async function boot() {
     try {
@@ -591,6 +699,7 @@
     }
     document.getElementById("grid").innerHTML = PRINTERS.map(skeletonCard).join("");
     setupAutoRefresh();
+    loadKyoceraConfig();
     refreshAll();
   }
 
