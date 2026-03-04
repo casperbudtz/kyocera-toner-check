@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Toner monitoring tools for Kyocera ECOSYS MA3500cifx/MA4000cifx printers via SNMP. Used to evaluate whether buying toner cartridges outright is cheaper than pay-per-click service agreements.
+Toner monitoring tools for Kyocera printers (color and B&W) via SNMP. Used to evaluate whether buying toner cartridges outright is cheaper than pay-per-click service agreements.
 
 Files:
 - `kyocera_toner_check.sh` — standalone bash CLI for manual spot-checks
 - `monitor.py` — **library module** (not a standalone server); exposes business logic imported by the top-level `command-central` server
 - `cron_check.py` — daily cron script; calls `check_printer(record_snapshot=True)` for every printer and appends a history entry to `toner_log.json`
 - `index.html` — browser dashboard; served at `/kyocera/` by the top-level server
-- `printers.json` — persistent printer list (managed via web UI or `add_printer()`/`remove_printer()`)
+- `printers.json` — persistent printer list (managed via `add_printer()`/`remove_printer()` or direct JSON edit)
 - `toner_log.json` — toner history; keyed by IP → supply name; includes baseline, last_seen, and a `history[]` array of `initial`/`replaced`/`snapshot` events
 - `cron.log` — stdout/stderr output from `cron_check.py` (auto-created)
 
@@ -59,8 +59,11 @@ Requires `snmpget` (from `snmp` package: `sudo apt install snmp`).
 
 ## Network
 
-- MA3500cifx #1: `192.168.1.210` (default)
-- MA3500cifx #2: `192.168.1.211`
+| IP | Name | Model |
+|----|------|-------|
+| `192.168.1.210` | Kyocera Kontor | MA3500cifx (color) |
+| `192.168.1.211` | Kyocera Kitte  | MA3500cifx (color) |
+| `192.168.1.212` | Kyocera Mette  | B&W |
 
 SNMP must be enabled on the printer via Command Center RX (web UI at printer IP): Network Settings → Protocol → SNMPv1/v2c = On, community string = `public`.
 
@@ -72,6 +75,7 @@ Base: `1.3.6.1.2.1.43`
 
 | OID suffix           | Description                                |
 |----------------------|--------------------------------------------|
+| `.11.1.1.4.1.x`      | Supply type (3=toner, 4=wasteToner)        |
 | `.11.1.1.6.1.x`      | Supply description (string)                |
 | `.11.1.1.8.1.x`      | Max capacity (rated pages at 5% coverage)  |
 | `.11.1.1.9.1.x`      | Current level (remaining pages at 5%)      |
@@ -89,7 +93,9 @@ Page count used per supply for coverage calculation:
 - **Black**: total page count (Black is consumed by both B&W and color prints)
 - **CMY**: color page count only (CMY are not consumed by B&W prints)
 
-Supply indices: 1=Cyan, 2=Magenta, 3=Yellow, 4=Black, 5=Waste Toner Box
+Supply indices vary by printer model. Supply type OID (`.4.1.x`) is used to detect waste toner boxes at any index. Color printers (MA3500cifx): indices 1–4 are toners (C/M/Y/K), index 5 is waste. B&W printers: index 1 is the toner, index 2 is waste.
+
+Supply names are derived from the SNMP description string: full colour words ("Cyan", "Black") or Kyocera model-number suffixes (TK-5370**C**S=Cyan, TK-5370**K**S=Black, TK-3400**S**→Black fallback).
 
 Waste toner level values: `-3` = OK, `-1` = Unknown, `0` = Full/replace.
 

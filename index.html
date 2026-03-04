@@ -44,6 +44,7 @@
       z-index: 10;
     }
 
+    .header-left { display: flex; align-items: center; }
     .header-left h1   { font-size: 1rem; font-weight: 700; }
     .header-left p    { font-size: .72rem; opacity: .6; margin-top: 1px; }
 
@@ -227,31 +228,6 @@
       padding: 14px 16px; color: #991b1b; font-size: .85rem;
     }
 
-    /* ── Add Printer Form ──────────────────────────────────── */
-    .add-form {
-      max-width: 1380px; margin: 0 auto; padding: 16px 24px 0;
-    }
-    .add-form-inner {
-      background: var(--card); border-radius: 10px;
-      box-shadow: 0 1px 4px rgba(0,0,0,.08);
-      padding: 14px 18px;
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    }
-    .add-form-inner input {
-      font-size: .85rem; padding: 6px 10px;
-      border: 1px solid var(--border); border-radius: 6px;
-      outline: none;
-    }
-    .add-form-inner input:focus { border-color: var(--accent); }
-    .add-form-inner .ip-input  { width: 150px; }
-    .add-form-inner .name-input { width: 200px; }
-    .add-form-inner .form-label {
-      font-size: .75rem; font-weight: 600; color: var(--muted);
-    }
-    .resolve-status {
-      font-size: .78rem; color: var(--muted); font-style: italic;
-    }
-
     /* ── Remove button ──────────────────────────────────────── */
     .btn-remove {
       background: transparent; border: none; color: rgba(255,255,255,.5);
@@ -265,8 +241,11 @@
 <body>
   <header>
     <div class="header-left">
-      <h1>Kyocera Toner Monitor</h1>
-      <p>ECOSYS MA3500cifx · SNMP Live Status</p>
+      <a href="/" style="color:rgba(255,255,255,.55);font-size:.82rem;text-decoration:none;margin-right:14px;white-space:nowrap;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.55)'">← Command Central</a>
+      <div>
+        <h1>Kyocera Toner Monitor</h1>
+        <p>ECOSYS MA3500cifx · SNMP Live Status</p>
+      </div>
     </div>
     <div class="header-right">
       <label class="auto-label">
@@ -281,17 +260,6 @@
       <button class="btn" onclick="refreshAll()">↻ Refresh All</button>
     </div>
   </header>
-
-  <div class="add-form">
-    <div class="add-form-inner">
-      <span class="form-label">Add Printer</span>
-      <input class="ip-input" id="addIp" type="text" placeholder="IP address">
-      <button class="btn btn-sm" id="resolveBtn" onclick="resolveIp()">Resolve</button>
-      <input class="name-input" id="addName" type="text" placeholder="Name (auto-resolved)">
-      <button class="btn btn-sm" id="addBtn" onclick="addPrinter()">+ Add</button>
-      <span class="resolve-status" id="resolveStatus"></span>
-    </div>
-  </div>
 
   <main id="grid"></main>
 

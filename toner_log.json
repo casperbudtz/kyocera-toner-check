@@ -8,9 +8,9 @@
         "max": 2500
       },
       "last_seen": {
-        "timestamp": "2026-03-03 15:23:20",
+        "timestamp": "2026-03-04 10:40:05",
         "level": 2225,
-        "page_count": 110
+        "page_count": 122
       },
       "history": [
         {
@@ -46,6 +46,13 @@
           "timestamp": "2026-03-02 23:55:01",
           "page_count": 83,
           "level": 2250,
+          "max": 2500
+        },
+        {
+          "event": "snapshot",
+          "timestamp": "2026-03-03 23:55:01",
+          "page_count": 111,
+          "level": 2225,
           "max": 2500
         }
       ]
@@ -58,9 +65,9 @@
         "max": 2500
       },
       "last_seen": {
-        "timestamp": "2026-03-03 15:23:20",
+        "timestamp": "2026-03-04 10:40:05",
         "level": 2225,
-        "page_count": 110
+        "page_count": 122
       },
       "history": [
         {
@@ -96,6 +103,13 @@
           "timestamp": "2026-03-02 23:55:01",
           "page_count": 83,
           "level": 2250,
+          "max": 2500
+        },
+        {
+          "event": "snapshot",
+          "timestamp": "2026-03-03 23:55:01",
+          "page_count": 111,
+          "level": 2225,
           "max": 2500
         }
       ]
@@ -108,9 +122,9 @@
         "max": 2500
       },
       "last_seen": {
-        "timestamp": "2026-03-03 15:23:20",
+        "timestamp": "2026-03-04 10:40:05",
         "level": 2225,
-        "page_count": 110
+        "page_count": 122
       },
       "history": [
         {
@@ -147,6 +161,13 @@
           "page_count": 83,
           "level": 2250,
           "max": 2500
+        },
+        {
+          "event": "snapshot",
+          "timestamp": "2026-03-03 23:55:01",
+          "page_count": 111,
+          "level": 2225,
+          "max": 2500
         }
       ]
     },
@@ -158,9 +179,9 @@
         "max": 3500
       },
       "last_seen": {
-        "timestamp": "2026-03-03 15:23:20",
+        "timestamp": "2026-03-04 10:40:05",
         "level": 3220,
-        "page_count": 162
+        "page_count": 176
       },
       "history": [
         {
@@ -197,6 +218,13 @@
           "page_count": 127,
           "level": 3255,
           "max": 3500
+        },
+        {
+          "event": "snapshot",
+          "timestamp": "2026-03-03 23:55:01",
+          "page_count": 164,
+          "level": 3220,
+          "max": 3500
         }
       ]
     }
@@ -210,9 +238,9 @@
         "max": 2500
       },
       "last_seen": {
-        "timestamp": "2026-03-03 15:23:21",
+        "timestamp": "2026-03-04 10:40:06",
         "level": 2275,
-        "page_count": 72
+        "page_count": 85
       },
       "history": [
         {
@@ -248,6 +276,13 @@
           "timestamp": "2026-03-02 23:55:01",
           "page_count": 52,
           "level": 2300,
+          "max": 2500
+        },
+        {
+          "event": "snapshot",
+          "timestamp": "2026-03-03 23:55:01",
+          "page_count": 72,
+          "level": 2275,
           "max": 2500
         }
       ]
@@ -260,9 +295,9 @@
         "max": 2500
       },
       "last_seen": {
-        "timestamp": "2026-03-03 15:23:21",
-        "level": 2275,
-        "page_count": 72
+        "timestamp": "2026-03-04 10:40:06",
+        "level": 2250,
+        "page_count": 85
       },
       "history": [
         {
@@ -297,6 +332,13 @@
           "event": "snapshot",
           "timestamp": "2026-03-02 23:55:01",
           "page_count": 52,
+          "level": 2275,
+          "max": 2500
+        },
+        {
+          "event": "snapshot",
+          "timestamp": "2026-03-03 23:55:01",
+          "page_count": 72,
           "level": 2275,
           "max": 2500
         }
@@ -310,9 +352,9 @@
         "max": 2500
       },
       "last_seen": {
-        "timestamp": "2026-03-03 15:23:21",
-        "level": 2275,
-        "page_count": 72
+        "timestamp": "2026-03-04 10:40:06",
+        "level": 2250,
+        "page_count": 85
       },
       "history": [
         {
@@ -349,6 +391,13 @@
           "page_count": 52,
           "level": 2275,
           "max": 2500
+        },
+        {
+          "event": "snapshot",
+          "timestamp": "2026-03-03 23:55:01",
+          "page_count": 72,
+          "level": 2275,
+          "max": 2500
         }
       ]
     },
@@ -360,9 +409,9 @@
         "max": 3500
       },
       "last_seen": {
-        "timestamp": "2026-03-03 15:23:21",
+        "timestamp": "2026-03-04 10:40:06",
         "level": 3255,
-        "page_count": 140
+        "page_count": 163
       },
       "history": [
         {
@@ -399,6 +448,13 @@
           "page_count": 97,
           "level": 3290,
           "max": 3500
+        },
+        {
+          "event": "snapshot",
+          "timestamp": "2026-03-03 23:55:01",
+          "page_count": 140,
+          "level": 3255,
+          "max": 3500
         }
       ]
     }
@@ -412,9 +468,9 @@
         "max": 6000
       },
       "last_seen": {
-        "timestamp": "2026-03-03 15:23:21",
+        "timestamp": "2026-03-04 10:40:06",
         "level": 5940,
-        "page_count": 1
+        "page_count": 6
       },
       "history": [
         {
@@ -422,6 +478,13 @@
           "timestamp": "2026-03-03 14:56:32",
           "page_count": 0,
           "level": 6000,
+          "max": 6000
+        },
+        {
+          "event": "snapshot",
+          "timestamp": "2026-03-03 23:55:01",
+          "page_count": 1,
+          "level": 5940,
           "max": 6000
         }
       ]
