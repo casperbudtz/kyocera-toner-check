@@ -74,45 +74,54 @@ def _pricerunner_url(product_model):
             f"&suggestionsActive=true&suggestionClicked=false&suggestionReverted=false")
 
 
-def _send_alert_email(email_cfg, alerts):
+def _send_alert_email(email_cfg, trigger_alerts, bundle_alerts=None):
     """Build and send a toner alert email.
 
-    alerts: list of dicts with keys:
+    trigger_alerts: supplies at/below the days threshold (newly triggered).
+    bundle_alerts:  supplies within threshold+30 days — included so you can
+                    combine the purchase in one order.
+
+    Both lists contain dicts with keys:
         printer_name, ip, supply_name, product_model, days_left, percent, install_timestamp
     """
-    n       = len(alerts)
-    subject = f"Kyocera Toner Alert — {n} supply{'s' if n > 1 else ''} low"
+    bundle_alerts = bundle_alerts or []
+    n_trigger = len(trigger_alerts)
+    n_bundle  = len(bundle_alerts)
 
-    # Group by printer for readability
-    by_printer = {}
-    for a in alerts:
-        by_printer.setdefault((a["printer_name"], a["ip"]), []).append(a)
+    subject = f"Kyocera Toner Alert — {n_trigger} supply{'s' if n_trigger > 1 else ''} low"
+    if n_bundle:
+        subject += f" (+ {n_bundle} coming soon)"
 
-    # ── Plain-text body ───────────────────────────────────────────────────────
-    text_lines = ["The following toner cartridges need attention:\n"]
-    for (pname, ip), supplies in by_printer.items():
-        text_lines.append(f"{pname} ({ip}):")
-        for s in supplies:
-            model = s.get("product_model") or "—"
-            days  = s.get("days_left", "?")
-            pct   = s.get("percent", 0)
-            text_lines.append(f"  • {s['supply_name']} ({model}) — {days}d left ({pct:.1f}%)")
-            url = _pricerunner_url(s.get("product_model"))
-            if url:
-                text_lines.append(f"    Order: {url}")
-        text_lines.append("")
-    text_lines.append("---\nKyocera Toner Monitor — Command Central")
-    text_body = "\n".join(text_lines)
-
-    # ── HTML body ─────────────────────────────────────────────────────────────
     TONER_COLORS = {
         "Cyan": "#00bcd4", "Magenta": "#d81b60",
         "Yellow": "#f9a825", "Black": "#424242",
     }
 
-    rows_html = ""
-    for (pname, ip), supplies in by_printer.items():
-        rows_html += f"""
+    def _supply_text_lines(alerts):
+        lines = []
+        by_printer = {}
+        for a in alerts:
+            by_printer.setdefault((a["printer_name"], a["ip"]), []).append(a)
+        for (pname, ip), supplies in by_printer.items():
+            lines.append(f"{pname} ({ip}):")
+            for s in supplies:
+                model = s.get("product_model") or "—"
+                days  = s.get("days_left", "?")
+                pct   = s.get("percent", 0)
+                lines.append(f"  • {s['supply_name']} ({model}) — {days}d left ({pct:.1f}%)")
+                url = _pricerunner_url(s.get("product_model"))
+                if url:
+                    lines.append(f"    Order: {url}")
+            lines.append("")
+        return lines
+
+    def _supply_rows_html(alerts, day_col_urgent):
+        html = ""
+        by_printer = {}
+        for a in alerts:
+            by_printer.setdefault((a["printer_name"], a["ip"]), []).append(a)
+        for (pname, ip), supplies in by_printer.items():
+            html += f"""
         <tr>
           <td colspan="4"
               style="padding:10px 12px 4px;background:#f3f4f6;font-weight:700;
@@ -120,15 +129,15 @@ def _send_alert_email(email_cfg, alerts):
             {pname} <span style="font-weight:400;color:#6b7280;font-size:.8rem">({ip})</span>
           </td>
         </tr>"""
-        for s in supplies:
-            model    = s.get("product_model") or "—"
-            days     = s.get("days_left", "?")
-            pct      = s.get("percent", 0)
-            dot_col  = TONER_COLORS.get(s["supply_name"], "#999")
-            day_col  = "#dc2626" if isinstance(days, int) and days < 7 else "#d97706"
-            url      = _pricerunner_url(s.get("product_model"))
-            link     = f'<a href="{url}" style="color:#0d6efd">Search PriceRunner.dk ↗</a>' if url else "—"
-            rows_html += f"""
+            for s in supplies:
+                model   = s.get("product_model") or "—"
+                days    = s.get("days_left", "?")
+                pct     = s.get("percent", 0)
+                dot_col = TONER_COLORS.get(s["supply_name"], "#999")
+                day_col = day_col_urgent if isinstance(days, int) and days < 7 else "#d97706"
+                url     = _pricerunner_url(s.get("product_model"))
+                link    = f'<a href="{url}" style="color:#0d6efd">Search PriceRunner.dk ↗</a>' if url else "—"
+                html += f"""
         <tr>
           <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle">
             <span style="display:inline-block;width:10px;height:10px;border-radius:50%;
@@ -140,6 +149,33 @@ def _send_alert_email(email_cfg, alerts):
                      font-weight:700;color:{day_col}">{days}d / {pct:.1f}%</td>
           <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-size:.8rem">{link}</td>
         </tr>"""
+        return html
+
+    # ── Plain-text body ───────────────────────────────────────────────────────
+    text_lines = ["The following toner cartridges need attention:\n"]
+    text_lines += _supply_text_lines(trigger_alerts)
+    if bundle_alerts:
+        text_lines += [
+            "Order together — running low within 30 days:\n",
+            *_supply_text_lines(bundle_alerts),
+        ]
+    text_lines.append("---\nKyocera Toner Monitor — Command Central")
+    text_body = "\n".join(text_lines)
+
+    # ── HTML body ─────────────────────────────────────────────────────────────
+    rows_html = _supply_rows_html(trigger_alerts, day_col_urgent="#dc2626")
+
+    if bundle_alerts:
+        rows_html += f"""
+        <tr>
+          <td colspan="4"
+              style="padding:10px 12px 4px;background:#fffbeb;font-weight:700;
+                     font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;
+                     color:#92400e;border-top:2px solid #fde68a;">
+            Order together — running low within 30 days
+          </td>
+        </tr>"""
+        rows_html += _supply_rows_html(bundle_alerts, day_col_urgent="#d97706")
 
     html_body = f"""<!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
@@ -148,7 +184,7 @@ def _send_alert_email(email_cfg, alerts):
   <div style="max-width:620px;margin:0 auto">
     <div style="background:#1a1a2e;color:#fff;padding:16px 20px;border-radius:10px 10px 0 0">
       <div style="font-size:1rem;font-weight:700">Kyocera Toner Alert</div>
-      <div style="font-size:.78rem;opacity:.6;margin-top:2px">{n} supply{'s' if n > 1 else ''} below threshold</div>
+      <div style="font-size:.78rem;opacity:.6;margin-top:2px">{n_trigger} supply{'s' if n_trigger > 1 else ''} below threshold{f', {n_bundle} coming soon' if n_bundle else ''}</div>
     </div>
     <div style="background:#fff;border:1px solid #e0e4ea;border-top:none;
                 border-radius:0 0 10px 10px;overflow:hidden">
@@ -203,9 +239,11 @@ def _check_notifications(results):
         return
 
     threshold    = int(kyocera_cfg.get("notify_days_threshold", 7))
+    lookahead    = threshold + 30
     notify_sent  = _load_json(NOTIFY_SENT_FILE, {})
-    new_alerts   = []
-    updated_sent = {k: dict(v) for k, v in notify_sent.items()}  # deep copy
+    trigger_alerts = []   # at/below threshold — drives whether email fires
+    bundle_alerts  = []   # above threshold but within lookahead — included for grouped purchase
+    updated_sent   = {k: dict(v) for k, v in notify_sent.items()}  # deep copy
 
     for ip, result in results.items():
         if result.get("error"):
@@ -215,38 +253,45 @@ def _check_notifications(results):
             if s.get("error"):
                 continue
             days_left = s.get("days_left")
-            if days_left is None or days_left > threshold:
+            if days_left is None or days_left > lookahead:
                 continue
 
             supply_name       = s["name"]
             install_timestamp = s.get("install_timestamp", "")
 
-            # Check deduplication: was this cartridge's threshold already notified?
-            already_notified = (
-                notify_sent.get(ip, {}).get(supply_name) == install_timestamp
-            )
-            if already_notified:
+            # Skip if already notified for this cartridge lifetime
+            if notify_sent.get(ip, {}).get(supply_name) == install_timestamp:
                 continue
 
-            new_alerts.append({
-                "printer_name":    printer_name,
-                "ip":              ip,
-                "supply_name":     supply_name,
-                "product_model":   s.get("product_model"),
-                "days_left":       days_left,
-                "percent":         s.get("percent", 0),
+            alert = {
+                "printer_name":      printer_name,
+                "ip":                ip,
+                "supply_name":       supply_name,
+                "product_model":     s.get("product_model"),
+                "days_left":         days_left,
+                "percent":           s.get("percent", 0),
                 "install_timestamp": install_timestamp,
-            })
-            updated_sent.setdefault(ip, {})[supply_name] = install_timestamp
+            }
+            if days_left <= threshold:
+                trigger_alerts.append(alert)
+            else:
+                bundle_alerts.append(alert)
 
-    if not new_alerts:
+    # Only send if at least one supply has actually hit the threshold
+    if not trigger_alerts:
         return
+
+    # Mark all included supplies as notified (bundle supplies won't re-trigger later)
+    for a in trigger_alerts + bundle_alerts:
+        updated_sent.setdefault(a["ip"], {})[a["supply_name"]] = a["install_timestamp"]
 
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     try:
-        _send_alert_email(email_cfg, new_alerts)
+        _send_alert_email(email_cfg, trigger_alerts, bundle_alerts)
         _save_notify_sent(updated_sent)
-        print(f"[{ts}] NOTIFY  Alert sent — {len(new_alerts)} supply{'s' if len(new_alerts)>1 else ''} below {threshold}d threshold")
+        n_t, n_b = len(trigger_alerts), len(bundle_alerts)
+        bundled = f" + {n_b} bundled" if n_b else ""
+        print(f"[{ts}] NOTIFY  Alert sent — {n_t} supply{'s' if n_t > 1 else ''} below {threshold}d threshold{bundled}")
     except Exception as e:
         print(f"[{ts}] NOTIFY  Failed to send alert email: {e}", file=sys.stderr)
 

@@ -9,7 +9,7 @@ Toner monitoring tools for Kyocera printers (color and B&W) via SNMP. Used to ev
 Files:
 - `kyocera_toner_check.sh` — standalone bash CLI for manual spot-checks
 - `monitor.py` — **library module** (not a standalone server); exposes business logic imported by the top-level `command-central` server
-- `cron_check.py` — daily cron script; queries all printers, appends a history snapshot to `toner_log.json`, and sends low-toner alert emails (once per cartridge lifetime)
+- `cron_check.py` — daily cron script; queries all printers, appends a history snapshot to `toner_log.json`, and sends low-toner alert emails (once per cartridge lifetime). When an alert fires, any other supplies within `threshold + 30` days are bundled into the same email to enable grouped purchasing.
 - `index.html` — browser dashboard; served at `/kyocera/` by the top-level server
 - `printers.json` — persistent printer list (managed via `add_printer()`/`remove_printer()` or direct JSON edit); names are set manually
 - `kyocera_config.json` — notification settings (`notify_enabled`, `notify_days_threshold`); managed via the dashboard UI or direct JSON edit (auto-created)
@@ -159,13 +159,6 @@ crontab -e
 ### Locale
 
 `LC_NUMERIC=C` is set to force dot as decimal separator, fixing issues with Danish/European locales that use comma.
-
-## PRTG Integration
-
-A PowerShell PRTG EXE/Script sensor was attempted but failed (PRTG server on Windows Server 2012 R2 lacked the SNMP client feature). Alternatives:
-- PRTG "SNMP Custom Advanced" sensors using the raw OIDs above (toner levels and page counts, but no calculated coverage)
-- PRTG SSH Script Advanced sensor pointing to this script on a Linux box
-- Install Net-SNMP for Windows on the PRTG server
 
 ## Potential Enhancements
 
